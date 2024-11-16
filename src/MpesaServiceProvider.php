@@ -2,6 +2,7 @@
 
 namespace Botnetdobbs\Mpesa;
 
+use Botnetdobbs\Mpesa\Contracts\Client;
 use Illuminate\Support\ServiceProvider;
 use Botnetdobbs\Mpesa\Http\MpesaClient;
 
@@ -31,7 +32,7 @@ class MpesaServiceProvider extends ServiceProvider
             'mpesa'
         );
 
-        $this->app->singleton('mpesa', function ($app) {
+        $this->app->bind(Client::class, function ($app) {
             return new MpesaClient(
                 config('mpesa.consumer_key'),
                 config('mpesa.consumer_secret'),

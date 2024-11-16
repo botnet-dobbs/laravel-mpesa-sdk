@@ -53,12 +53,28 @@ return [
 
 ## Usage
 
+```php
+use Botnetdobbs\Mpesa\Contracts\Client;
+
+class PaymentController extends Controller
+{
+    public function __construct(
+        private readonly Client $mpesaClient
+    ) {}
+
+    public function initiatePayment()
+    {
+        $response = $this->mpesaClient->stkPush([...]);
+    }
+}
+
+```
+
 ### STK Push (Lipa Na M-Pesa Online)
 
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 
-$response = Mpesa::stkPush([
+$response = $this->mpesaClient->stkPush([
     "BusinessShortCode" => "174379",    // Organization's shortcode  (Paybill or Buygoods - A 5 to 6-digit account number) used to identify an organization and receive the transaction.
     "Passkey" => "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
     "TransactionType" => "CustomerPayBillOnline",    // or CustomerBuyGoodsOnline
@@ -74,9 +90,8 @@ $response = Mpesa::stkPush([
 ### STK Push (check the status of a Lipa Na M-Pesa Online Payment.)
 
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 
-$response = Mpesa::stkQuery([
+$response = $this->mpesaClient->stkQuery([
     "BusinessShortCode" => "174379",
     "Passkey" => "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
     "CheckoutRequestID" => "ws_CO_260520211133524545"
@@ -86,9 +101,8 @@ $response = Mpesa::stkQuery([
 ### B2C Payment (Business to Customer)
 
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 
-$response = Mpesa::b2c([
+$response = $this->mpesaClient->b2c([
     "OriginatorConversationID" => "unique-id",
     "InitiatorName" => "testapi",
     "SecurityCredential" => "your-security-credential", // Base64 Encode(OpenSSLEncrypt(Initiator Password + Certificate))
@@ -108,9 +122,8 @@ $response = Mpesa::b2c([
 B2B parameter naming convention is camelCase instead of PascalCase like the other endpoints on the [Safaricom Developer Portal](https://developer.safaricom.co.ke/APIs/B2BExpressCheckout). Retained as is
 
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 
-$response = Mpesa::b2b([
+$response = $this->mpesaClient->b2b([
     "primaryShortCode" => "000001",    // Sender business shortcode
     "receiverShortCode" => "000002",   // Receiver business shortcode
     "amount" => 100,
@@ -123,9 +136,8 @@ $response = Mpesa::b2b([
 
 ### C2B Register (Customer to Business)
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 
-$response = Mpesa::c2bRegister([
+$response = $this->mpesaClient->c2bRegister([
     "ShortCode" => "600000",
     "ResponseType" => "Completed",      // Or "Cancelled"
     "ConfirmationURL" => "https://example.com/confirmation",    // The URL that receives the confirmation request from API upon payment completion.
@@ -136,9 +148,8 @@ $response = Mpesa::c2bRegister([
 ### C2B Simulate Payment (Sandbox Environment Only)
 
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 
-$response = Mpesa::c2bSimulate([
+$response = $this->mpesaClient->c2bSimulate([
     "ShortCode" => "600000",
     "CommandID" => "CustomerPayBillOnline",  // Or "CustomerBuyGoodsOnline"
     "Amount" => 100,
@@ -150,9 +161,8 @@ $response = Mpesa::c2bSimulate([
 ### Account Balance Query
 
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 
-$response = Mpesa::accountBalance([
+$response = $this->mpesaClient->accountBalance([
     "Initiator" => "testapi",   // The credential/username used to authenticate the transaction request
     "SecurityCredential" => "your-security-credential", // Base64 encoded string of the M-PESA short code and password, which is encrypted using M-PESA public key and validates the transaction on M-PESA Core system. It indicates the Encrypted credential of the initiator getting the account balance. Its value must match the inputted value of the parameter IdentifierType.
     "CommandID" => "AccountBalance",
@@ -167,9 +177,8 @@ $response = Mpesa::accountBalance([
 ### Transaction Status Query
 
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 
-$response = Mpesa::transactionStatus([
+$response = $this->mpesaClient->transactionStatus([
     "Initiator" => "testapi",
     "SecurityCredential" => "your-security-credential",
     "CommandID" => "TransactionStatusQuery",
@@ -186,9 +195,8 @@ $response = Mpesa::transactionStatus([
 ### Transaction Reversal
 
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 
-$response = Mpesa::reversal([
+$response = $this->mpesaClient->reversal([
     "Initiator" => "testapi",
     "SecurityCredential" => "your-security-credential",
     "CommandID" => "TransactionReversal",
@@ -207,7 +215,7 @@ $response = Mpesa::reversal([
 All methods return a standard object containing the M-Pesa API response. Example success response:
 
 ```php
-$response = Mpesa::stkPush([...]);
+$response = $this->mpesaClient->stkPush([...]);
 
 // Access response properties
 echo $response->MerchantRequestID;
@@ -220,10 +228,9 @@ echo $response->ResponseDescription;
 The package throws `MpesaException` for various error scenarios:
 
 ```php
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 use Botnetdobbs\Mpesa\Exceptions\MpesaException;
 try {
-    $response = Mpesa::stkPush([...]);
+    $response = $this->mpesaClient->stkPush([...]);
 } catch (MpesaException $e) {
     // Handle the error
     logger()->error("M-Pesa error: " . $e->getMessage());

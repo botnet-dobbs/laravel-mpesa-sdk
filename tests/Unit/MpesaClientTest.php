@@ -2,6 +2,7 @@
 
 namespace Botnetdobbs\Mpesa\Tests\Unit;
 
+use Botnetdobbs\Mpesa\Contracts\Client;
 use Botnetdobbs\Mpesa\Exceptions\MpesaException;
 use Botnetdobbs\Mpesa\Facades\Mpesa;
 use Botnetdobbs\Mpesa\Http\MpesaAuthToken;
@@ -11,9 +12,12 @@ use Illuminate\Support\Facades\Http;
 
 class MpesaClientTest extends TestCase
 {
+    private Client $mpesaClient;
+
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mpesaClient = $this->app->make(Client::class);
     }
 
     public function testItThrowsExceptionIfAccessTokenGenerationFails(): void
@@ -23,7 +27,7 @@ class MpesaClientTest extends TestCase
         $this->expectException(MpesaException::class);
         $this->expectExceptionMessage('Failed to get access token: {"errorMessage":"Invalid credentials"}');
 
-        Mpesa::stkPush([
+        $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
             'Passkey' => 'test_passkey',
             'Amount' => 1,
@@ -42,7 +46,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::stkPush([
+        $response = $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
             'Passkey' => 'test_passkey',
             'TransactionType' => 'CustomerPayBillOnline',
@@ -69,7 +73,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::stkPush([
+        $response = $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
             'Passkey' => 'test_passkey',
             'Amount' => 1,
@@ -94,7 +98,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::stkQuery([
+        $response = $this->mpesaClient->stkQuery([
             'BusinessShortCode' => '174379',
             'Passkey' => 'test_passkey',
             'CheckoutRequestID' => 'test_checkout_id',
@@ -118,7 +122,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::b2c([
+        $response = $this->mpesaClient->b2c([
             "OriginatorConversationID" => "test_conversation_id",
             'InitiatorName' => 'test_initiator',
             'SecurityCredential' => 'test_credential',
@@ -151,7 +155,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::b2b([
+        $response = $this->mpesaClient->b2b([
             'primaryShortCode' => '000001',
             'receiverShortCode' => '000002',
             'amount' => '100',
@@ -180,7 +184,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::c2bRegister([
+        $response = $this->mpesaClient->c2bRegister([
             'ShortCode' => '174379',
             'ResponseType' => 'Completed',
             'ConfirmationURL' => 'https://example.com/confirm',
@@ -205,7 +209,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::c2bSimulate([
+        $response = $this->mpesaClient->c2bSimulate([
             'ShortCode' => '174379',
             'CommandID' => 'CustomerPayBillOnline',
             'Amount' => 1,
@@ -232,7 +236,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::accountBalance([
+        $response = $this->mpesaClient->accountBalance([
             'Initiator' => 'test_initiator',
             'SecurityCredential' => 'test_credential',
             'CommandID' => 'AccountBalance',
@@ -262,7 +266,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::transactionStatus([
+        $response = $this->mpesaClient->transactionStatus([
             'Initiator' => 'test_initiator',
             'SecurityCredential' => 'test_credential',
             'CommandID' => 'TransactionStatusQuery',
@@ -289,7 +293,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $response = Mpesa::reversal([
+        $response = $this->mpesaClient->reversal([
             'Initiator' => 'test_initiator',
             'SecurityCredential' => 'test_credential',
             'CommandID' => 'TransactionReversal',
@@ -319,7 +323,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        Mpesa::stkPush([
+        $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
             'Passkey' => 'test_passkey',
             'Amount' => 1,
@@ -350,7 +354,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        Mpesa::stkPush([
+        $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
             'Passkey' => 'test_passkey',
             'Amount' => 1,
@@ -372,7 +376,7 @@ class MpesaClientTest extends TestCase
         $this->expectException(MpesaException::class);
         $this->expectExceptionMessage('Mpesa API request failed: []');
 
-        Mpesa::stkPush([
+        $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
             'Passkey' => 'test_passkey',
             'Amount' => 1,
