@@ -145,7 +145,7 @@ class MpesaClient implements Client
 
     /**
      * Query the status of an STK Push transaction
-     * 
+     *
      * @param array{
      *     BusinessShortCode: numeric-string,   
      *     Passkey: string,                     
