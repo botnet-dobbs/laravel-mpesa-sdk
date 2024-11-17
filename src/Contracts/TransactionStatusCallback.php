@@ -24,8 +24,6 @@ interface TransactionStatusCallback
 
     public function getResultDescription(): string;
 
-    public function getDebitPartyNames(): ?array;
-
     public function getInitiatedTime(): ?string;
 
     public function getFinalisedTime(): ?string;
@@ -33,4 +31,9 @@ interface TransactionStatusCallback
     public function getDebitAccountType(): ?string;
 
     public function getDebitPartyCharges(): ?string;
+
+    /**
+     * @return array<int, string>|null
+     */
+    public function getDebitPartyNames(): ?array;
 }

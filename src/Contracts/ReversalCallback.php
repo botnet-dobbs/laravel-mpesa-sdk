@@ -38,7 +38,7 @@ interface ReversalCallback
     /**
      * @param string $account
      *
-     * @return array{currency: string, amount: float}|null
+     * @return array{currency: string, amount: float}
      */
     public function getDebitAccountBalance(string $account): array;
 }

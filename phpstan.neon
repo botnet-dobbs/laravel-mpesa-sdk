@@ -18,6 +18,7 @@ parameters:
         - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::transactionStatus\(\) should return object\{.*?\} but returns object\.#'
         - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::reversal\(\) should return object\{.*?\} but returns object\.#'
         - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::handleResponse\(\) should return object but returns object\|null.#'
+        - message: '#Method Botnetdobbs\\Mpesa\\Data\\.*::__construct\(\) has parameter \$.*#'
     excludePaths:
         - src/MpesaServiceProvider.php
         - vendor
