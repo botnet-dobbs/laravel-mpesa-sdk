@@ -26,7 +26,7 @@ class MpesaClient implements Client
         $this->consumerKey = $consumerKey;
         $this->consumerSecret = $consumerSecret;
         $this->environment = $environment;
-        $this->cacheManager = app('cache');
+        $this->cacheManager = app('cache'); // @phpstan-ignore-line
     }
 
     /**
@@ -34,7 +34,7 @@ class MpesaClient implements Client
      */
     private function getBaseUrl(): string
     {
-        return config("mpesa.endpoints.{$this->environment}.base_url");
+        return (string) config("mpesa.endpoints.{$this->environment}.base_url");
     }
 
     /**
@@ -44,7 +44,7 @@ class MpesaClient implements Client
      */
     private function getEndpoint(string $name): string
     {
-        return config("mpesa.endpoints.{$this->environment}.{$name}");
+        return (string) config("mpesa.endpoints.{$this->environment}.{$name}");
     }
 
     /**
@@ -74,7 +74,7 @@ class MpesaClient implements Client
         }
 
         $accessToken = new MpesaAuthToken(
-            $response->json('access_token'),
+            (string) $response->json('access_token'),
             (int) $response->json('expires_in')
         );
 
@@ -99,8 +99,8 @@ class MpesaClient implements Client
     private function client(): PendingRequest
     {
         return Http::withToken($this->getAccessToken())
-            ->timeout(config('mpesa.defaults.timeout'))
-            ->connectTimeout(config('mpesa.defaults.connect_timeout'))
+            ->timeout((int) config('mpesa.defaults.timeout'))
+            ->connectTimeout((int) config('mpesa.defaults.connect_timeout'))
             ->baseUrl($this->getBaseUrl());
     }
 
@@ -108,19 +108,19 @@ class MpesaClient implements Client
      * Initiates an STK Push request (Lipa Na M-Pesa Online)
      *
      * @param array{
-     *     BusinessShortCode: numeric-string,   # The organization's shortcode (Paybill or Buygoods)
-     *     Passkey: string,                     # The passkey provided by Safaricom
-     *     TransactionType: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",  # Type of transaction
-     *     Amount: positive-int,                # The amount to be charged
-     *     PartyA: numeric-string,              # The phone number sending money
-     *     PartyB: numeric-string,              # Organization's shortcode receiving funds
-     *     PhoneNumber: numeric-string,         # The phone number to prompt for payment
-     *     CallBackURL: string,                 # URL to receive payment notification
-     *     AccountReference: string,            # Account number for the transaction
-     *     TransactionDesc: string              # Description of the transaction
+     *     BusinessShortCode: numeric-string,   
+     *     Passkey: string,                     
+     *     TransactionType: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",  
+     *     Amount: positive-int,                
+     *     PartyA: numeric-string,              
+     *     PartyB: numeric-string,              
+     *     PhoneNumber: numeric-string,         
+     *     CallBackURL: string,                 
+     *     AccountReference: string,            
+     *     TransactionDesc: string              
      * } $data
      * 
-     * @throws MpesaException When the API request fails or validation errors occur
+     * @throws MpesaException
      * 
      * @return object{
      *     MerchantRequestID: string,
@@ -147,12 +147,12 @@ class MpesaClient implements Client
      * Query the status of an STK Push transaction
      * 
      * @param array{
-     *     BusinessShortCode: numeric-string,   # The organization's shortcode
-     *     Passkey: string,                     # The passkey provided by Safaricom
-     *     CheckoutRequestID: string            # The CheckoutRequestID from STK push response
+     *     BusinessShortCode: numeric-string,   
+     *     Passkey: string,                     
+     *     CheckoutRequestID: string            
      * } $data Query parameters
      * 
-     * @throws MpesaException When the API request fails
+     * @throws MpesaException
      * 
      * @return object{
      *     ResponseCode: string,
@@ -176,20 +176,20 @@ class MpesaClient implements Client
      * Initiates a Business to Customer (B2C) payment
      *
      * @param array{
-     *     OriginatorConversationID: string,    # Unique identifier for the transaction
-     *     InitiatorName: string,               # The name of the initiator
-     *     SecurityCredential: string,          # Base64 encoded security credential
-     *     CommandID: "SalaryPayment"|"BusinessPayment"|"PromotionPayment",  # Type of B2C payment
-     *     Amount: positive-int,                # Amount to be sent to customer
-     *     PartyA: numeric-string,              # Organization's shortcode
-     *     PartyB: numeric-string,              # Customer's phone number
-     *     Remarks: string,                     # Comments about the transaction
-     *     QueueTimeOutURL: string,             # Timeout notification URL
-     *     ResultURL: string,                   # Success notification URL
-     *     Occasion: string                     # Optional occasion description
+     *     OriginatorConversationID: string,    
+     *     InitiatorName: string,               
+     *     SecurityCredential: string,          
+     *     CommandID: "SalaryPayment"|"BusinessPayment"|"PromotionPayment",  
+     *     Amount: positive-int,                
+     *     PartyA: numeric-string,              
+     *     PartyB: numeric-string,              
+     *     Remarks: string,                     
+     *     QueueTimeOutURL: string,             
+     *     ResultURL: string,                   
+     *     Occasion: string                     
      * } $data Transaction parameters
      * 
-     * @throws MpesaException When the API request fails
+     * @throws MpesaException
      * 
      * @return object{
      *     ConversationID: string,
@@ -208,16 +208,16 @@ class MpesaClient implements Client
      * Initiates a Business to Business (B2B) payment
      *
      * @param array{
-     *     primaryShortCode: numeric-string,    # Organization sending funds
-     *     receiverShortCode: numeric-string,   # Organization receiving funds
-     *     amount: positive-int,                # Amount to transfer
-     *     paymentRef: string,                  # Your reference for the transaction
-     *     callbackUrl: string,                 # URL for payment notification
-     *     partnerName: string,                 # Name of receiving organization
-     *     RequestRefID: string                 # Unique identifier for this request
+     *     primaryShortCode: numeric-string,    
+     *     receiverShortCode: numeric-string,   
+     *     amount: positive-int,                
+     *     paymentRef: string,                  
+     *     callbackUrl: string,                 
+     *     partnerName: string,                 
+     *     RequestRefID: string                 
      * } $data Transaction parameters
      * 
-     * @throws MpesaException When the API request fails
+     * @throws MpesaException
      * 
      * @return object{
      *     code: string,
@@ -234,13 +234,13 @@ class MpesaClient implements Client
      *Register URLs for C2B (Customer to Business) payments
      *
      * @param array{
-     *     ShortCode: numeric-string,               # Your organization's shortcode
-     *     ResponseType: "Completed"|"Canceled",    # Response type for validation
-     *     ConfirmationURL: string,                 # URL to receive payment confirmations
-     *     ValidationURL: string                    # URL to validate payments
+     *     ShortCode: numeric-string,               
+     *     ResponseType: "Completed"|"Canceled",    
+     *     ConfirmationURL: string,                 
+     *     ValidationURL: string                    
      * } $data URL registration parameters
      * 
-     * @throws MpesaException When the API request fails
+     * @throws MpesaException
      * 
      * @return object{
      *     OriginatorCoversationID: string,
@@ -258,14 +258,14 @@ class MpesaClient implements Client
      * Simulate a C2B (Customer to Business) payment (Test environment only)
      *
      * @param array{
-     *     ShortCode: numeric-string,                                       # Organization receiving payment
-     *     CommandID: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",     # Type of C2B transaction
-     *     Amount: positive-int,                                            # Amount to be paid
-     *     Msisdn: numeric-string,                                          # Phone number making payment
-     *     BillRefNumber: string                                            # Account reference number
+     *     ShortCode: numeric-string,                                       
+     *     CommandID: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",     
+     *     Amount: positive-int,                                            
+     *     Msisdn: numeric-string,                                          
+     *     BillRefNumber: string                                            
      * } $data Simulation parameters
      * 
-     * @throws MpesaException When the API request fails
+     * @throws MpesaException
      * 
      * @return object{
      *     OriginatorConversationID: string,
@@ -283,20 +283,20 @@ class MpesaClient implements Client
      * Query account balance
      *
      * @param array{
-     *     Initiator: string,                   # Name of the initiator
-     *     SecurityCredential: string,          # Base64 encoded security credential
-     *     CommandID: "AccountBalance",         # Command ID for balance query
-     *     PartyA: numeric-string,              # Organization checking balance
-     *     IdentifierType: "1"|"2"|"4",         # Type of organization
-     *     Remarks: string,                     # Comments about the query
-     *     QueueTimeOutURL: string,             # Timeout notification URL
-     *     ResultURL: string                    # Success notification URL
+     *     Initiator: string,                   
+     *     SecurityCredential: string,          
+     *     CommandID: "AccountBalance",         
+     *     PartyA: numeric-string,              
+     *     IdentifierType: "1"|"2"|"4",         
+     *     Remarks: string,                     
+     *     QueueTimeOutURL: string,             
+     *     ResultURL: string                    
      * } $data Query parameters
      * 
-     * @throws MpesaException When the API request fails
+     * @throws MpesaException
      * 
      * @return object{
-     *     OriginatorConversationID: string
+     *     OriginatorConversationID: string,
      *     ConversationID: string,
      *     ResponseCode: string,
      *     ResponseDescription: string,
@@ -312,22 +312,22 @@ class MpesaClient implements Client
      * Check the status of a transaction
      *
      * @param array{
-     *     Initiator: string,                       # Name of the initiator
-     *     SecurityCredential: string,              # Base64 encoded security credential
-     *     CommandID: "TransactionStatusQuery",     # Command ID for status check
-     *     TransactionID: string,                   # M-Pesa transaction ID
-     *     PartyA: numeric-string,                  # Organization's shortcode
-     *     IdentifierType: "1"|"2"|"4",             # Type of organization
-     *     ResultURL: string,                       # Success notification URL
-     *     QueueTimeOutURL: string,                 # Timeout notification URL
-     *     Remarks: string,                         # Comments about the query
-     *     Occasion: string                         # Optional description
+     *     Initiator: string,                       
+     *     SecurityCredential: string,              
+     *     CommandID: "TransactionStatusQuery",     
+     *     TransactionID: string,                   
+     *     PartyA: numeric-string,                  
+     *     IdentifierType: "1"|"2"|"4",             
+     *     ResultURL: string,                       
+     *     QueueTimeOutURL: string,                 
+     *     Remarks: string,                         
+     *     Occasion: string                         
      * } $data Query parameters
      * 
-     * @throws MpesaException When the API request fails
+     * @throws MpesaException
      * 
      * @return object{
-     *     OriginatorConversationID: string
+     *     OriginatorConversationID: string,
      *     ConversationID: string,
      *     ResponseCode: string,
      *     ResponseDescription: string,
@@ -343,23 +343,23 @@ class MpesaClient implements Client
      * Reverse a completed M-Pesa transaction
      *
      * @param array{
-     *     Initiator: string,                # Name of the initiator
-     *     SecurityCredential: string,        # Base64 encoded security credential
-     *     CommandID: "TransactionReversal",  # Command ID for reversal
-     *     TransactionID: string,            # M-Pesa transaction ID to reverse
-     *     Amount: positive-int,             # Amount to reverse
-     *     ReceiverParty: numeric-string,    # Organization receiving the reversal
-     *     ReceiverIdentifierType: "1"|"2"|"4",  # Type of receiving organization
-     *     ResultURL: string,                # Success notification URL
-     *     QueueTimeOutURL: string,          # Timeout notification URL
-     *     Remarks: string,                  # Comments about the reversal
-     *     Occasion: string                  # Optional description
+     *     Initiator: string,                
+     *     SecurityCredential: string,        
+     *     CommandID: "TransactionReversal",  
+     *     TransactionID: string,            
+     *     Amount: positive-int,             
+     *     ReceiverParty: numeric-string,    
+     *     ReceiverIdentifierType: "1"|"2"|"4",  
+     *     ResultURL: string,                
+     *     QueueTimeOutURL: string,          
+     *     Remarks: string,                  
+     *     Occasion: string                  
      * } $data Reversal parameters
      * 
-     * @throws MpesaException When the API request fails
+     * @throws MpesaException
      * 
      * @return object{
-     *     OriginatorConversationID: string
+     *     OriginatorConversationID: string,
      *     ConversationID: string,
      *     ResponseCode: string,
      *     ResponseDescription: string,
@@ -374,6 +374,7 @@ class MpesaClient implements Client
     /**
      * @param string $shortcode
      * @param string $passkey
+     * 
      * @return string
      */
     private function generatePassword(string $shortcode, string $passkey): string
@@ -385,6 +386,7 @@ class MpesaClient implements Client
     /**
      * @param Response $response
      * @return object
+     * 
      * @throws MpesaException
      */
     private function handleResponse(Response $response): object

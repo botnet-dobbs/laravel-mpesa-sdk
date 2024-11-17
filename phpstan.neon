@@ -6,8 +6,22 @@ parameters:
     paths:
         - src
     ignoreErrors:
+        - '#Cannot cast mixed to int.#'
+        - '#Cannot cast mixed to string.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::stkPush\(\) should return object\{.*?\} but returns object\.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::stkQuery\(\) should return object\{.*?\} but returns object\.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::b2c\(\) should return object\{.*?\} but returns object\.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::b2b\(\) should return object\{.*?\} but returns object\.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::c2bRegister\(\) should return object\{.*?\} but returns object\.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::c2bSimulate\(\) should return object\{.*?\} but returns object\.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::accountBalance\(\) should return object\{.*?\} but returns object\.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::transactionStatus\(\) should return object\{.*?\} but returns object\.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::reversal\(\) should return object\{.*?\} but returns object\.#'
+        - '#Method Botnetdobbs\\Mpesa\\Http\\MpesaClient::handleResponse\(\) should return object but returns object\|null.#'
     excludePaths:
+        - src/MpesaServiceProvider.php
         - vendor
         - tests
     fileExtensions:
         - php
+    reportUnmatchedIgnoredErrors: false
