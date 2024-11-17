@@ -2,7 +2,7 @@
 
 namespace Botnetdobbs\Mpesa\Data;
 
-class AccountBalanceCallbackData implements \Botnetdobbs\Mpesa\Contracts\AccountBalanceCallback
+class AccountBalanceCallbackData extends BaseMpesaCallbackData implements \Botnetdobbs\Mpesa\Contracts\AccountBalanceCallback
 {
     public function __construct(
         public int $ResultType,
@@ -59,37 +59,25 @@ class AccountBalanceCallbackData implements \Botnetdobbs\Mpesa\Contracts\Account
     /**
      * Get all account balances
      *
-     * @return array<string, array{currency: string, amount: float}>
+     * @return array<int, array{Account: string, Currency: string, Amount: float}>
      */
     public function getAccountBalances(): array
     {
-        $balanceString = $this->ResultParameters['AccountBalance'] ?? null;
-        if (!$balanceString) {
-            return [];
-        }
-
-        $accounts = explode('&', $balanceString);
-        $balances = [];
-
-        foreach ($accounts as $account) {
-            [$name, $currency, $amount] = explode('|', $account);
-            $balances[$name] = [
-                'currency' => $currency,
-                'amount' => (float) $amount
-            ];
-        }
-
-        return $balances;
+        return $this->parseBalanceString(
+            $this->ResultParameters['AccountBalance'] ?? ''
+        );
     }
 
     /**
      * Get balance for a specific account type
      *
-     * @return array{currency: string, amount: float}|null
+     * @return array{Account: string, Currency: string, Amount: float}|null
      */
     public function getBalanceForAccount(string $accountName): ?array
     {
-        $balances = $this->getAccountBalances();
-        return $balances[$accountName] ?? null;
+        return $this->getBalanceForAccountName(
+            $this->getAccountBalances(),
+            $accountName
+        );
     }
 }

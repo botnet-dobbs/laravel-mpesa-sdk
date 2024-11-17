@@ -215,8 +215,17 @@ class MpesaCallbackTest extends TestCase
         $this->assertEquals('AG_20180223_0000493344ae97d86f75', $callback->getConversationId());
         $this->assertEquals('MBN0000000', $callback->getTransactionId());
         $this->assertEquals('Utility Account', $callback->getDebitAccountType());
-        $this->assertEquals('Fee For B2C Payment|KES|22.40', $callback->getDebitPartyCharges());
         $this->assertEquals(['601315 - Safaricom1338', '601315 - Safaricom'], $callback->getDebitPartyNames());
+
+        $debitPartyCharges = $callback->getDebitPartyCharges();
+        $this->assertCount(1, $debitPartyCharges);
+        $this->assertEquals('KES', $debitPartyCharges[0]['Currency']);
+        $this->assertEquals(22.40, $debitPartyCharges[0]['Amount']);
+        $this->assertEquals('Fee For B2C Payment', $debitPartyCharges[0]['Account']);
+
+        $debitPartyCharge = $callback->getDebitPartyCharge('Fee For B2C Payment');
+        $this->assertEquals('KES', $debitPartyCharge['Currency']);
+        $this->assertEquals(22.40, $debitPartyCharge['Amount']);
     }
 
     public function testItCanHandleAccountBalanceCallback(): void
@@ -251,14 +260,15 @@ class MpesaCallbackTest extends TestCase
         $this->assertTrue($callback->isSuccessful());
 
         $balances = $callback->getAccountBalances();
-        $this->assertEquals('KES', $balances['Working Account']['currency']);
-        $this->assertEquals(700000.00, $balances['Working Account']['amount']);
-        $this->assertEquals('KES', $balances['Float Account']['currency']);
-        $this->assertEquals(0.00, $balances['Float Account']['amount']);
+        $this->assertCount(2, $balances);
 
         $workingAccount = $callback->getBalanceForAccount('Working Account');
-        $this->assertEquals('KES', $workingAccount['currency']);
-        $this->assertEquals(700000.00, $workingAccount['amount']);
+        $this->assertEquals('KES', $workingAccount['Currency']);
+        $this->assertEquals(700000.00, $workingAccount['Amount']);
+
+        $floatAccount = $callback->getBalanceForAccount('Float Account');
+        $this->assertEquals('KES', $floatAccount['Currency']);
+        $this->assertEquals(0.00, $floatAccount['Amount']);
 
         $this->assertEquals('16917-22577599-3', $callback->getOriginatorConversationId());
         $this->assertEquals('AG_20200206_00005e091a8ec6b9eac5', $callback->getConversationId());
@@ -300,12 +310,14 @@ class MpesaCallbackTest extends TestCase
         $this->assertTrue($callback->isSuccessful());
 
         $balances = $callback->getDebitAccountBalances();
-        $this->assertEquals('KES', $balances['Working Account']['currency']);
-        $this->assertEquals(51661.00, $balances['Working Account']['amount']);
+        $this->assertCount(1, $balances);
+        $this->assertEquals('KES', $balances[0]['Currency']);
+        $this->assertEquals(51661.00, $balances[0]['Amount']);
+        $this->assertEquals('Working Account', $balances[0]['Account']);
 
         $balance = $callback->getDebitAccountBalance('Working Account');
-        $this->assertEquals('KES', $balance['currency']);
-        $this->assertEquals(51661.00, $balance['amount']);
+        $this->assertEquals('KES', $balance['Currency']);
+        $this->assertEquals(51661.00, $balance['Amount']);
 
         $this->assertEquals('MJ561H6X5O', $callback->getTransactionId());
         $this->assertEquals('8521-4298025-1', $callback->getOriginatorConversationId());

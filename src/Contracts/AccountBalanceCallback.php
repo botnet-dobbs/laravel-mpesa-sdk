@@ -22,16 +22,12 @@ interface AccountBalanceCallback
 
 
     /**
-     * Get all account balances
-     *
-     * @return array<string, array{currency: string, amount: float}>
+     * @return array<int, array{Account: string, Currency: string, Amount: float}>
      */
     public function getAccountBalances(): array;
 
     /**
-     * Get balance for a specific account type
-     *
-     * @return array{currency: string, amount: float}|null
+     * @return array{Account: string, Currency: string, Amount: float}|null
      */
     public function getBalanceForAccount(string $accountName): ?array;
 }

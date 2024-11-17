@@ -364,7 +364,8 @@ $callback->getDebitPartyNames(): ?array
 $callback->getInitiatedTime(): ?string
 $callback->getFinalisedTime(): ?string
 $callback->getDebitAccountType(): ?string
-$callback->getDebitPartyCharges(): ?string
+$callback->getDebitPartyCharges(): array
+$callback->getDebitPartyCharge(): ?array
 ```
 
 #### Reversal Callback

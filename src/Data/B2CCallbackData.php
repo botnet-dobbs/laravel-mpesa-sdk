@@ -2,7 +2,7 @@
 
 namespace Botnetdobbs\Mpesa\Data;
 
-class B2CCallbackData implements \Botnetdobbs\Mpesa\Contracts\B2CCallback
+class B2CCallbackData extends BaseMpesaCallbackData implements \Botnetdobbs\Mpesa\Contracts\B2CCallback
 {
     public function __construct(
         public int $ResultType,

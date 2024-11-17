@@ -2,7 +2,7 @@
 
 namespace Botnetdobbs\Mpesa\Data;
 
-class ReversalCallbackData implements \Botnetdobbs\Mpesa\Contracts\ReversalCallback
+class ReversalCallbackData extends BaseMpesaCallbackData implements \Botnetdobbs\Mpesa\Contracts\ReversalCallback
 {
     public function __construct(
         public int $ResultType,
@@ -82,37 +82,25 @@ class ReversalCallbackData implements \Botnetdobbs\Mpesa\Contracts\ReversalCallb
     }
 
     /**
-     * @return array<string, array<string, mixed>>
+     * @return array<int, array{Account: string, Currency: string, Amount: float}>
      */
     public function getDebitAccountBalances(): array
     {
-        $balanceString = $this->ResultParameters['DebitAccountBalance'] ?? null;
-        if (!$balanceString) {
-            return [];
-        }
-
-        $accounts = explode('&', $balanceString);
-        $balances = [];
-
-        foreach ($accounts as $account) {
-            [$name, $currency, $amount] = explode('|', $account);
-            $balances[$name] = [
-                'currency' => $currency,
-                'amount' => (float) $amount
-            ];
-        }
-
-        return $balances;
+        return $this->parseBalanceString(
+            $this->ResultParameters['DebitAccountBalance'] ?? ''
+        );
     }
 
     /**
      * @param string $account
      *
-     * @return array<string, mixed>
+     * @return array{Account: string, Currency: string, Amount: float}|null
      */
-    public function getDebitAccountBalance(string $account): array
+    public function getDebitAccountBalance(string $account): ?array
     {
-        $balances = $this->getDebitAccountBalances();
-        return $balances[$account] ?? [];
+        return $this->getBalanceForAccountName(
+            $this->getDebitAccountBalances(),
+            $account
+        );
     }
 }

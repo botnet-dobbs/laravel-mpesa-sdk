@@ -31,14 +31,14 @@ interface ReversalCallback
     public function getDebitPartyPublicName(): ?string;
 
     /**
-     * @return array<string, array<string, mixed>>
+     * @return array<int, array{Account: string, Currency: string, Amount: float}>
      */
     public function getDebitAccountBalances(): array;
 
     /**
      * @param string $account
      *
-     * @return array{currency: string, amount: float}
+     * @return array{account: string, currency: string, amount: float}|null
      */
-    public function getDebitAccountBalance(string $account): array;
+    public function getDebitAccountBalance(string $account): ?array;
 }

@@ -108,20 +108,20 @@ class MpesaClient implements Client
      * Initiates an STK Push request (Lipa Na M-Pesa Online)
      *
      * @param array{
-     *     BusinessShortCode: numeric-string,   
-     *     Passkey: string,                     
-     *     TransactionType: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",  
-     *     Amount: positive-int,                
-     *     PartyA: numeric-string,              
-     *     PartyB: numeric-string,              
-     *     PhoneNumber: numeric-string,         
-     *     CallBackURL: string,                 
-     *     AccountReference: string,            
-     *     TransactionDesc: string              
+     *     BusinessShortCode: numeric-string,
+     *     Passkey: string,
+     *     TransactionType: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",
+     *     Amount: positive-int,
+     *     PartyA: numeric-string,
+     *     PartyB: numeric-string,
+     *     PhoneNumber: numeric-string,
+     *     CallBackURL: string,
+     *     AccountReference: string,
+     *     TransactionDesc: string
      * } $data
-     * 
+     *
      * @throws MpesaException
-     * 
+     *
      * @return object{
      *     MerchantRequestID: string,
      *     CheckoutRequestID: string,
@@ -147,13 +147,13 @@ class MpesaClient implements Client
      * Query the status of an STK Push transaction
      *
      * @param array{
-     *     BusinessShortCode: numeric-string,   
-     *     Passkey: string,                     
-     *     CheckoutRequestID: string            
+     *     BusinessShortCode: numeric-string,
+     *     Passkey: string,
+     *     CheckoutRequestID: string
      * } $data Query parameters
-     * 
+     *
      * @throws MpesaException
-     * 
+     *
      * @return object{
      *     ResponseCode: string,
      *     ResponseDescription: string,
@@ -176,21 +176,21 @@ class MpesaClient implements Client
      * Initiates a Business to Customer (B2C) payment
      *
      * @param array{
-     *     OriginatorConversationID: string,    
-     *     InitiatorName: string,               
-     *     SecurityCredential: string,          
-     *     CommandID: "SalaryPayment"|"BusinessPayment"|"PromotionPayment",  
-     *     Amount: positive-int,                
-     *     PartyA: numeric-string,              
-     *     PartyB: numeric-string,              
-     *     Remarks: string,                     
-     *     QueueTimeOutURL: string,             
-     *     ResultURL: string,                   
-     *     Occasion: string                     
+     *     OriginatorConversationID: string,
+     *     InitiatorName: string,
+     *     SecurityCredential: string,
+     *     CommandID: "SalaryPayment"|"BusinessPayment"|"PromotionPayment",
+     *     Amount: positive-int,
+     *     PartyA: numeric-string,
+     *     PartyB: numeric-string,
+     *     Remarks: string,
+     *     QueueTimeOutURL: string,
+     *     ResultURL: string,
+     *     Occasion: string
      * } $data Transaction parameters
-     * 
+     *
      * @throws MpesaException
-     * 
+     *
      * @return object{
      *     ConversationID: string,
      *     OriginatorConversationID: string,
@@ -208,17 +208,17 @@ class MpesaClient implements Client
      * Initiates a Business to Business (B2B) payment
      *
      * @param array{
-     *     primaryShortCode: numeric-string,    
-     *     receiverShortCode: numeric-string,   
-     *     amount: positive-int,                
-     *     paymentRef: string,                  
-     *     callbackUrl: string,                 
-     *     partnerName: string,                 
-     *     RequestRefID: string                 
+     *     primaryShortCode: numeric-string,
+     *     receiverShortCode: numeric-string,
+     *     amount: positive-int,
+     *     paymentRef: string,
+     *     callbackUrl: string,
+     *     partnerName: string,
+     *     RequestRefID: string
      * } $data Transaction parameters
-     * 
+     *
      * @throws MpesaException
-     * 
+     *
      * @return object{
      *     code: string,
      *     status: string
@@ -234,14 +234,14 @@ class MpesaClient implements Client
      *Register URLs for C2B (Customer to Business) payments
      *
      * @param array{
-     *     ShortCode: numeric-string,               
-     *     ResponseType: "Completed"|"Canceled",    
-     *     ConfirmationURL: string,                 
-     *     ValidationURL: string                    
+     *     ShortCode: numeric-string,
+     *     ResponseType: "Completed"|"Canceled",
+     *     ConfirmationURL: string,
+     *     ValidationURL: string
      * } $data URL registration parameters
-     * 
+     *
      * @throws MpesaException
-     * 
+     *
      * @return object{
      *     OriginatorCoversationID: string,
      *     ResponseCode: string,
@@ -258,15 +258,15 @@ class MpesaClient implements Client
      * Simulate a C2B (Customer to Business) payment (Test environment only)
      *
      * @param array{
-     *     ShortCode: numeric-string,                                       
-     *     CommandID: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",     
-     *     Amount: positive-int,                                            
-     *     Msisdn: numeric-string,                                          
-     *     BillRefNumber: string                                            
+     *     ShortCode: numeric-string,
+     *     CommandID: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",
+     *     Amount: positive-int,
+     *     Msisdn: numeric-string,
+     *     BillRefNumber: string
      * } $data Simulation parameters
-     * 
+     *
      * @throws MpesaException
-     * 
+     *
      * @return object{
      *     OriginatorConversationID: string,
      *     ResponseCode: string,
@@ -283,18 +283,18 @@ class MpesaClient implements Client
      * Query account balance
      *
      * @param array{
-     *     Initiator: string,                   
-     *     SecurityCredential: string,          
-     *     CommandID: "AccountBalance",         
-     *     PartyA: numeric-string,              
-     *     IdentifierType: "1"|"2"|"4",         
-     *     Remarks: string,                     
-     *     QueueTimeOutURL: string,             
-     *     ResultURL: string                    
+     *     Initiator: string,
+     *     SecurityCredential: string,
+     *     CommandID: "AccountBalance",
+     *     PartyA: numeric-string,
+     *     IdentifierType: "1"|"2"|"4",
+     *     Remarks: string,
+     *     QueueTimeOutURL: string,
+     *     ResultURL: string
      * } $data Query parameters
-     * 
+     *
      * @throws MpesaException
-     * 
+     *
      * @return object{
      *     OriginatorConversationID: string,
      *     ConversationID: string,
@@ -312,20 +312,20 @@ class MpesaClient implements Client
      * Check the status of a transaction
      *
      * @param array{
-     *     Initiator: string,                       
-     *     SecurityCredential: string,              
-     *     CommandID: "TransactionStatusQuery",     
-     *     TransactionID: string,                   
-     *     PartyA: numeric-string,                  
-     *     IdentifierType: "1"|"2"|"4",             
-     *     ResultURL: string,                       
-     *     QueueTimeOutURL: string,                 
-     *     Remarks: string,                         
-     *     Occasion: string                         
+     *     Initiator: string,
+     *     SecurityCredential: string,
+     *     CommandID: "TransactionStatusQuery",
+     *     TransactionID: string,
+     *     PartyA: numeric-string,
+     *     IdentifierType: "1"|"2"|"4",
+     *     ResultURL: string,
+     *     QueueTimeOutURL: string,
+     *     Remarks: string,
+     *     Occasion: string
      * } $data Query parameters
-     * 
+     *
      * @throws MpesaException
-     * 
+     *
      * @return object{
      *     OriginatorConversationID: string,
      *     ConversationID: string,
@@ -343,21 +343,21 @@ class MpesaClient implements Client
      * Reverse a completed M-Pesa transaction
      *
      * @param array{
-     *     Initiator: string,                
-     *     SecurityCredential: string,        
-     *     CommandID: "TransactionReversal",  
-     *     TransactionID: string,            
-     *     Amount: positive-int,             
-     *     ReceiverParty: numeric-string,    
-     *     ReceiverIdentifierType: "1"|"2"|"4",  
-     *     ResultURL: string,                
-     *     QueueTimeOutURL: string,          
-     *     Remarks: string,                  
-     *     Occasion: string                  
+     *     Initiator: string,
+     *     SecurityCredential: string,
+     *     CommandID: "TransactionReversal",
+     *     TransactionID: string,
+     *     Amount: positive-int,
+     *     ReceiverParty: numeric-string,
+     *     ReceiverIdentifierType: "1"|"2"|"4",
+     *     ResultURL: string,
+     *     QueueTimeOutURL: string,
+     *     Remarks: string,
+     *     Occasion: string
      * } $data Reversal parameters
-     * 
+     *
      * @throws MpesaException
-     * 
+     *
      * @return object{
      *     OriginatorConversationID: string,
      *     ConversationID: string,
@@ -374,7 +374,7 @@ class MpesaClient implements Client
     /**
      * @param string $shortcode
      * @param string $passkey
-     * 
+     *
      * @return string
      */
     private function generatePassword(string $shortcode, string $passkey): string
@@ -386,7 +386,7 @@ class MpesaClient implements Client
     /**
      * @param Response $response
      * @return object
-     * 
+     *
      * @throws MpesaException
      */
     private function handleResponse(Response $response): object

@@ -40,8 +40,8 @@ class MpesaCallback implements CallbackHandler
             ResultCode: $result['ResultCode'],
             ResultDesc: $result['ResultDesc'],
             CallbackMetadata: $this->formatKeyValueArray(
-                $result['CallbackMetadata']['Item'] ?? [], 
-                'Name', 
+                $result['CallbackMetadata']['Item'] ?? [],
+                'Name',
                 'Value'
             )
         );
@@ -71,13 +71,13 @@ class MpesaCallback implements CallbackHandler
             ConversationID: $result['ConversationID'],
             TransactionID: $result['TransactionID'],
             ResultParameters: $this->formatKeyValueArray(
-                $result['ResultParameters']['ResultParameter'] ?? [], 
-                'Key', 
+                $result['ResultParameters']['ResultParameter'] ?? [],
+                'Key',
                 'Value'
             ),
             ReferenceData: $this->formatKeyValueArray(
-                $result['ReferenceData']['ReferenceItem'] ?? [], 
-                'Key', 
+                $result['ReferenceData']['ReferenceItem'] ?? [],
+                'Key',
                 'Value'
             )
         );
@@ -107,14 +107,14 @@ class MpesaCallback implements CallbackHandler
             ConversationID: $result['ConversationID'],
             TransactionID: $result['TransactionID'],
             ResultParameters: $this->formatKeyValueArray(
-                $result['ResultParameters']['ResultParameter'] ?? [], 
-                'Key', 
-                'Value', 
+                $result['ResultParameters']['ResultParameter'] ?? [],
+                'Key',
+                'Value',
                 ['DebitPartyName']
             ),
             ReferenceData: $this->formatKeyValueArray(
-                $result['ReferenceData']['ReferenceItem'] ?? [], 
-                'Key', 
+                $result['ReferenceData']['ReferenceItem'] ?? [],
+                'Key',
                 'Value'
             )
         );
@@ -144,13 +144,13 @@ class MpesaCallback implements CallbackHandler
             ConversationID: $result['ConversationID'],
             TransactionID: $result['TransactionID'],
             ResultParameters: $this->formatKeyValueArray(
-                $result['ResultParameters']['ResultParameter'] ?? [], 
-                'Key', 
+                $result['ResultParameters']['ResultParameter'] ?? [],
+                'Key',
                 'Value'
             ),
             ReferenceData: $this->formatKeyValueArray(
-                $result['ReferenceData']['ReferenceItem'] ?? [], 
-                'Key', 
+                $result['ReferenceData']['ReferenceItem'] ?? [],
+                'Key',
                 'Value'
             )
         );
@@ -180,13 +180,13 @@ class MpesaCallback implements CallbackHandler
             ConversationID: $result['ConversationID'],
             TransactionID: $result['TransactionID'],
             ResultParameters: $this->formatKeyValueArray(
-                $result['ResultParameters']['ResultParameter'] ?? [], 
-                'Key', 
+                $result['ResultParameters']['ResultParameter'] ?? [],
+                'Key',
                 'Value'
             ),
             ReferenceData: $this->formatKeyValueArray(
-                $result['ReferenceData']['ReferenceItem'] ?? [], 
-                'Key', 
+                $result['ReferenceData']['ReferenceItem'] ?? [],
+                'Key',
                 'Value'
             )
         );
@@ -208,7 +208,7 @@ class MpesaCallback implements CallbackHandler
      *    'Receipt' => 'ABC123',
      *    'Other' => 'XYZ2'
      * ]
-     * 
+     *
      * Example output with whereMultiple = ['Other']:
      * [
      *    'Amount' => 100,
@@ -220,7 +220,7 @@ class MpesaCallback implements CallbackHandler
      * @param string $keyField
      * @param string $valueField
      * @param array<int, string> $whereMultiple
-     * 
+     *
      * @return array<string, mixed>
      */
     private function formatKeyValueArray(array $array, string $keyField, string $valueField, array $whereMultiple = []): array

@@ -30,10 +30,18 @@ interface TransactionStatusCallback
 
     public function getDebitAccountType(): ?string;
 
-    public function getDebitPartyCharges(): ?string;
-
     /**
      * @return array<int, string>|null
      */
     public function getDebitPartyNames(): ?array;
+
+    /**
+     * @return array<int, array{Account: string, Currency: string, Amount: float}>
+     */
+    public function getDebitPartyCharges(): array;
+
+    /**
+     * @return array{Account: string, Currency: string, Amount: float}|null
+     */
+    public function getDebitPartyCharge(string $accountName): ?array;
 }

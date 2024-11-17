@@ -2,7 +2,7 @@
 
 namespace Botnetdobbs\Mpesa\Data;
 
-class TransactionStatusCallbackData implements \Botnetdobbs\Mpesa\Contracts\TransactionStatusCallback
+class TransactionStatusCallbackData extends BaseMpesaCallbackData implements \Botnetdobbs\Mpesa\Contracts\TransactionStatusCallback
 {
     public function __construct(
         public int $ResultType,
@@ -81,11 +81,6 @@ class TransactionStatusCallbackData implements \Botnetdobbs\Mpesa\Contracts\Tran
         return $this->ResultParameters['DebitAccountType'] ?? null;
     }
 
-    public function getDebitPartyCharges(): ?string
-    {
-        return $this->ResultParameters['DebitPartyCharges'] ?? null;
-    }
-
     /**
      * @return array<int, string>|null
      */
@@ -93,5 +88,26 @@ class TransactionStatusCallbackData implements \Botnetdobbs\Mpesa\Contracts\Tran
     {
         $debitParty = $this->ResultParameters['DebitPartyName'] ?? null;
         return $debitParty ? (array) $debitParty : null;
+    }
+
+    /**
+     * @return array<int, array{Account: string, Currency: string, Amount: float}>
+     */
+    public function getDebitPartyCharges(): array
+    {
+        return $this->parseBalanceString(
+            $this->ResultParameters['DebitPartyCharges'] ?? ''
+        );
+    }
+
+    /**
+     * @return array{Account: string, Currency: string, Amount: float}|null
+     */
+    public function getDebitPartyCharge(string $accountName): ?array
+    {
+        return $this->getBalanceForAccountName(
+            $this->getDebitPartyCharges(),
+            $accountName
+        );
     }
 }
