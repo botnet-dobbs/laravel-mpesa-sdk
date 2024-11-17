@@ -7,8 +7,11 @@ For the most current API documentation and updates, always refer to the [Safaric
 ## Requirements
 
 - PHP 8.2+
-- Laravel 11.x
-- Composer 2.x
+
+| Laravel Version  |
+|------------------|
+| Laravel 10.x     |
+| Laravel 11.x     |
 
 ## Installation
 
