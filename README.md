@@ -15,7 +15,7 @@ For the most current API documentation and updates, always refer to the [Safaric
 Install the package via Composer:
 
 ```bash
-composer require botnet-dobbs/mpesa
+composer require botnetdobbs/laravel-mpesa-sdk
 ```
 
 Publish the configuration file:
