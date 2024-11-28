@@ -22,6 +22,9 @@ class MpesaServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__ . '/config/mpesa.php' => config_path('mpesa.php'),
         ], 'mpesa-config');
+
+        $endpointsConfig = require __DIR__ . '/config/mpesa-endpoints.php';
+        config()->set('mpesa.endpoints', $endpointsConfig);
     }
 
     /**
