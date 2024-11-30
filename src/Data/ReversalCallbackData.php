@@ -2,7 +2,9 @@
 
 namespace Botnetdobbs\Mpesa\Data;
 
-class ReversalCallbackData extends BaseMpesaCallbackData implements \Botnetdobbs\Mpesa\Contracts\ReversalCallback
+use Botnetdobbs\Mpesa\Contracts\ReversalCallback;
+
+class ReversalCallbackData extends BaseMpesaCallbackData implements ReversalCallback
 {
     public function __construct(
         public int $ResultType,

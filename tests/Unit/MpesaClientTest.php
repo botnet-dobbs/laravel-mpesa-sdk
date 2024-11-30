@@ -4,11 +4,14 @@ namespace Botnetdobbs\Mpesa\Tests\Unit;
 
 use Botnetdobbs\Mpesa\Contracts\Client;
 use Botnetdobbs\Mpesa\Exceptions\MpesaException;
-use Botnetdobbs\Mpesa\Facades\Mpesa;
 use Botnetdobbs\Mpesa\Http\MpesaAuthToken;
+use Botnetdobbs\Mpesa\Http\MpesaClient;
+use Botnetdobbs\Mpesa\Services\InitiatorCredentialGenerator;
 use Botnetdobbs\Mpesa\Tests\TestCase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use InvalidArgumentException;
+use Mockery;
 
 class MpesaClientTest extends TestCase
 {
@@ -17,6 +20,12 @@ class MpesaClientTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $mockGenerator = Mockery::mock(InitiatorCredentialGenerator::class);
+        $mockGenerator->shouldReceive('generate')
+            ->andReturn('test_security_credential');
+        $this->app->instance(InitiatorCredentialGenerator::class, $mockGenerator);
+
         $this->mpesaClient = $this->app->make(Client::class);
     }
 
@@ -29,9 +38,9 @@ class MpesaClientTest extends TestCase
 
         $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
-            'Passkey' => 'test_passkey',
             'Amount' => 1,
             'PhoneNumber' => '254722188188',
+            'CallBackURL' => 'https://example.com/callback',
         ]);
     }
 
@@ -48,10 +57,9 @@ class MpesaClientTest extends TestCase
 
         $response = $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
-            'Passkey' => 'test_passkey',
-            'TransactionType' => 'CustomerPayBillOnline',
             'Amount' => 1,
             'PhoneNumber' => '254722188188',
+            'CallBackURL' => 'https://example.com/callback',
         ]);
 
         Http::assertSent(function ($request) {
@@ -60,6 +68,18 @@ class MpesaClientTest extends TestCase
 
         $this->assertEquals('0', $response->ResponseCode);
         $this->assertEquals('Success. Request accepted for processing', $response->ResponseDescription);
+    }
+
+    public function testItThrowsExceptionWhenRequiredArgumentsAreMissing()
+    {
+        $this->mockSuccessfulTokenGeneration();
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->mpesaClient->stkPush([
+            'Amount' => 1,
+            'CallBackURL' => 'https://example.com/callback',
+        ]);
     }
 
     public function testItCanHandleFailedSTKPushRequest(): void
@@ -75,9 +95,9 @@ class MpesaClientTest extends TestCase
 
         $response = $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
-            'Passkey' => 'test_passkey',
             'Amount' => 1,
             'PhoneNumber' => '254722188188',
+            'CallBackURL' => 'https://example.com/callback',
         ]);
 
         $this->assertEquals('Failed', $response->ResponseDescription);
@@ -100,7 +120,6 @@ class MpesaClientTest extends TestCase
 
         $response = $this->mpesaClient->stkQuery([
             'BusinessShortCode' => '174379',
-            'Passkey' => 'test_passkey',
             'CheckoutRequestID' => 'test_checkout_id',
         ]);
 
@@ -116,7 +135,7 @@ class MpesaClientTest extends TestCase
         $this->mockSuccessfulTokenGeneration();
 
         Http::fake([
-            '*/mpesa/b2c/v1/paymentrequest*' => Http::response([
+            '*/mpesa/b2c/v3/paymentrequest*' => Http::response([
                 'ResponseCode' => '0',
                 'ResponseDescription' => 'Accept the service request successfully.',
             ], 200)
@@ -300,7 +319,7 @@ class MpesaClientTest extends TestCase
             'TransactionID' => 'test_transaction_id',
             'Amount' => 1,
             'ReceiverParty' => '174379',
-            'RecieverIdentifierType' => 4,
+            'ReceiverIdentifierType' => 4,
             'ResultURL' => 'https://example.com/result',
             'QueueTimeOutURL' => 'https://example.com/timeout',
             'Remarks' => 'test_remark',
@@ -325,9 +344,9 @@ class MpesaClientTest extends TestCase
 
         $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
-            'Passkey' => 'test_passkey',
             'Amount' => 1,
             'PhoneNumber' => '254722188188',
+            'CallBackURL' => 'https://example.com/callback',
         ]);
 
         Http::assertSent(function ($request) {
@@ -356,9 +375,9 @@ class MpesaClientTest extends TestCase
 
         $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
-            'Passkey' => 'test_passkey',
             'Amount' => 1,
             'PhoneNumber' => '254722188188',
+            'CallBackURL' => 'https://example.com/callback',
         ]);
 
         $cachedToken = Cache::get('mpesa_access_token');
@@ -378,9 +397,65 @@ class MpesaClientTest extends TestCase
 
         $this->mpesaClient->stkPush([
             'BusinessShortCode' => '174379',
-            'Passkey' => 'test_passkey',
             'Amount' => 1,
             'PhoneNumber' => '254722188188',
+            'CallBackURL' => 'https://example.com/callback',
         ]);
+    }
+
+    public function testThrowsExceptionForEmptyConsumerKey(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Mpesa consumer key not configured');
+
+        new MpesaClient(
+            '',
+            'test_secret',
+            'sandbox',
+            app('cache'),
+            app(InitiatorCredentialGenerator::class)
+        );
+    }
+
+    public function testThrowsExceptionForEmptyConsumerSecret(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Mpesa consumer secret not configured');
+
+        new MpesaClient(
+            'test_key',
+            '',
+            'sandbox',
+            app('cache'),
+            app(InitiatorCredentialGenerator::class)
+        );
+    }
+
+    public function testThrowsExceptionForEmptyEnvironment(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Mpesa environment not configured');
+
+        new MpesaClient(
+            'test_key',
+            'test_secret',
+            '',
+            app('cache'),
+            app(InitiatorCredentialGenerator::class)
+        );
+    }
+
+    public function testThrowsExceptionForInvalidEnvironment(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid Mpesa environment. Must be either sandbox or production');
+
+        new MpesaClient(
+            'test_key',
+            'test_secret',
+            'invalid',
+            app('cache'),
+            app(InitiatorCredentialGenerator::class)
+        );
     }
 }

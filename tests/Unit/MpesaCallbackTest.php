@@ -243,7 +243,7 @@ class MpesaCallbackTest extends TestCase
                     'ResultParameter' => [
                         [
                             'Key' => 'AccountBalance',
-                            'Value' => 'Working Account|KES|700000.00|700000.00|0.00|0.00&Float Account|KES|0.00|0.00|0.00|0.00'
+                            'Value' => 'Working Account|KES|700000.00|700000.00|0.00|0.00&Float Account|KES|0|0|0|0'
                         ],
                         [
                             'Key' => 'BOCompletedTime',

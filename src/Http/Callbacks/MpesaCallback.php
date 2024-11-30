@@ -223,8 +223,12 @@ class MpesaCallback implements CallbackHandler
      *
      * @return array<string, mixed>
      */
-    private function formatKeyValueArray(array $array, string $keyField, string $valueField, array $whereMultiple = []): array
-    {
+    private function formatKeyValueArray(
+        array $array,
+        string $keyField,
+        string $valueField,
+        array $whereMultiple = []
+    ): array {
         if (empty($array)) {
             return [];
         }

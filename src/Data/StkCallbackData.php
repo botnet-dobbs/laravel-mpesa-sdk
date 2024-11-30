@@ -2,7 +2,9 @@
 
 namespace Botnetdobbs\Mpesa\Data;
 
-class StkCallbackData extends BaseMpesaCallbackData implements \Botnetdobbs\Mpesa\Contracts\StkCallback
+use Botnetdobbs\Mpesa\Contracts\StkCallback;
+
+class StkCallbackData extends BaseMpesaCallbackData implements StkCallback
 {
     public function __construct(
         public string $MerchantRequestID,

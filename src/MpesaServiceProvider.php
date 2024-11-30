@@ -9,6 +9,7 @@ use Botnetdobbs\Mpesa\Http\Callbacks\CallbackResponse;
 use Botnetdobbs\Mpesa\Http\Callbacks\MpesaCallback;
 use Illuminate\Support\ServiceProvider;
 use Botnetdobbs\Mpesa\Http\MpesaClient;
+use Botnetdobbs\Mpesa\Services\InitiatorCredentialGenerator;
 
 class MpesaServiceProvider extends ServiceProvider
 {
@@ -39,11 +40,17 @@ class MpesaServiceProvider extends ServiceProvider
             'mpesa'
         );
 
+        $this->app->singleton(InitiatorCredentialGenerator::class, function ($app) {
+            return new InitiatorCredentialGenerator($app['cache']);
+        });
+
         $this->app->bind(Client::class, function ($app) {
             return new MpesaClient(
-                config('mpesa.consumer_key'),
-                config('mpesa.consumer_secret'),
-                config('mpesa.environment'),
+                (string) config('mpesa.consumer_key'), // @phpstan-ignore-line
+                (string) config('mpesa.consumer_secret'), // @phpstan-ignore-line
+                (string) config('mpesa.environment'), // @phpstan-ignore-line
+                $app['cache'],
+                $app->make(InitiatorCredentialGenerator::class)
             );
         });
 

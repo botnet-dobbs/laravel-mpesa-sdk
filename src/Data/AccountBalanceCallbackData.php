@@ -2,7 +2,9 @@
 
 namespace Botnetdobbs\Mpesa\Data;
 
-class AccountBalanceCallbackData extends BaseMpesaCallbackData implements \Botnetdobbs\Mpesa\Contracts\AccountBalanceCallback
+use Botnetdobbs\Mpesa\Contracts\AccountBalanceCallback;
+
+class AccountBalanceCallbackData extends BaseMpesaCallbackData implements AccountBalanceCallback
 {
     public function __construct(
         public int $ResultType,

@@ -12,7 +12,7 @@ trait MpesaCallbackHelper
     protected function parseBalanceString(string $balanceString): array
     {
         if (blank($balanceString)) {
-            return [];
+            return []; // @codeCoverageIgnore
         }
 
         $accounts = explode('&', $balanceString);

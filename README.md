@@ -34,6 +34,9 @@ Add the following variables to your `.env` file:
 ```env
 MPESA_CONSUMER_KEY=your_consumer_key
 MPESA_CONSUMER_SECRET=your_consumer_secret
+MPESA_LIPA_NA_MPESA_PASSKEY=your_lipa_na_mpesa_passkey
+MPESA_INITIATOR_PASSWORD=your_initiator_password
+MPESA_CERTIFICATE_PATH=your_downloaded_mpesa_certificate_path
 MPESA_ENV=sandbox  # or "live" for production
 ```
 
@@ -41,12 +44,17 @@ MPESA_ENV=sandbox  # or "live" for production
 
 The published config file (`config/mpesa.php`) contains the following options:
 
+For the cerfiticate, [Download](https://developer.safaricom.co.ke/Documentation) under M-Pesa API Certificates.
+
 ```php
 return [
     "consumer_key" => env("MPESA_CONSUMER_KEY"),
     "consumer_secret" => env("MPESA_CONSUMER_SECRET"),
+    "lipa_na_mpesa_passkey" => env("MPESA_LIPA_NA_MPESA_PASSKEY", "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"),  // default set for sandbox testing
+    "initiator_password" => env("MPESA_INITIATOR_PASSWORD"),
+    "certificate_path" => env("MPESA_CERTIFICATE_PATH"),
     "environment" => env("MPESA_ENV", "sandbox"),
-    
+
     "defaults" => [
         "timeout" => 30,
         "connect_timeout" => 10,
@@ -79,11 +87,9 @@ class PaymentController extends Controller
 
 $response = $this->mpesaClient->stkPush([
     "BusinessShortCode" => "174379",    // Organization's shortcode  (Paybill or Buygoods - A 5 to 6-digit account number) used to identify an organization and receive the transaction.
-    "Passkey" => "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
     "TransactionType" => "CustomerPayBillOnline",    // or CustomerBuyGoodsOnline
     "Amount" => 1,
-    "PartyA" => "254722000000",  // Customer phone number
-    "PhoneNumber" => "254722000000", // The Mobile Number to receive the STK Pin Prompt. PartyA
+    "PhoneNumber" => "254722000000", // The Mobile Number to receive the STK Pin Prompt.
     "CallBackURL" => "https://example.com/callback",    // Valid secure URL that is used to receive notifications from M-Pesa API.
     "AccountReference" => "Test",
     "TransactionDesc" => "Test Payment"
@@ -96,7 +102,6 @@ $response = $this->mpesaClient->stkPush([
 
 $response = $this->mpesaClient->stkQuery([
     "BusinessShortCode" => "174379",
-    "Passkey" => "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
     "CheckoutRequestID" => "ws_CO_260520211133524545"
 ]);
 ```
@@ -108,7 +113,6 @@ $response = $this->mpesaClient->stkQuery([
 $response = $this->mpesaClient->b2c([
     "OriginatorConversationID" => "unique-id",
     "InitiatorName" => "testapi",
-    "SecurityCredential" => "your-security-credential", // Base64 Encode(OpenSSLEncrypt(Initiator Password + Certificate))
     "CommandID" => "BusinessPayment",  // Or "SalaryPayment", "PromotionPayment"
     "Amount" => 100,
     "PartyA" => "600000",      // Your business shortcode
@@ -167,7 +171,6 @@ $response = $this->mpesaClient->c2bSimulate([
 
 $response = $this->mpesaClient->accountBalance([
     "Initiator" => "testapi",   // The credential/username used to authenticate the transaction request
-    "SecurityCredential" => "your-security-credential", // Base64 encoded string of the M-PESA short code and password, which is encrypted using M-PESA public key and validates the transaction on M-PESA Core system. It indicates the Encrypted credential of the initiator getting the account balance. Its value must match the inputted value of the parameter IdentifierType.
     "CommandID" => "AccountBalance",
     "PartyA" => "600000",              // Your business shortcode
     "IdentifierType" => "4",           // 4 for organization shortcode
@@ -183,7 +186,6 @@ $response = $this->mpesaClient->accountBalance([
 
 $response = $this->mpesaClient->transactionStatus([
     "Initiator" => "testapi",
-    "SecurityCredential" => "your-security-credential",
     "CommandID" => "TransactionStatusQuery",
     "TransactionID" => "OEI2AK4Q16",    // The M-Pesa transaction ID
     "PartyA" => "600000",               // Your business shortcode
@@ -201,7 +203,6 @@ $response = $this->mpesaClient->transactionStatus([
 
 $response = $this->mpesaClient->reversal([
     "Initiator" => "testapi",
-    "SecurityCredential" => "your-security-credential",
     "CommandID" => "TransactionReversal",
     "TransactionID" => "OEI2AK4Q16",     // The M-Pesa transaction ID to reverse
     "Amount" => 100,                      // Amount to reverse

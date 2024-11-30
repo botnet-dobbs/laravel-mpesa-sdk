@@ -11,11 +11,8 @@ interface Client
      *
      * @param array{
      *     BusinessShortCode: numeric-string,
-     *     Passkey: string,
      *     TransactionType: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",
      *     Amount: positive-int,
-     *     PartyA: numeric-string,
-     *     PartyB: numeric-string,
      *     PhoneNumber: numeric-string,
      *     CallBackURL: string,
      *     AccountReference: string,
@@ -39,7 +36,6 @@ interface Client
      *
      * @param array{
      *     BusinessShortCode: numeric-string,
-     *     Passkey: string,
      *     CheckoutRequestID: string
      * } $data Query parameters
      *
@@ -62,7 +58,6 @@ interface Client
      * @param array{
      *     OriginatorConversationID: string,
      *     InitiatorName: string,
-     *     SecurityCredential: string,
      *     CommandID: "SalaryPayment"|"BusinessPayment"|"PromotionPayment",
      *     Amount: positive-int,
      *     PartyA: numeric-string,
@@ -152,7 +147,6 @@ interface Client
      *
      * @param array{
      *     Initiator: string,
-     *     SecurityCredential: string,
      *     CommandID: "AccountBalance",
      *     PartyA: numeric-string,
      *     IdentifierType: "1"|"2"|"4",
@@ -177,7 +171,6 @@ interface Client
      *
      * @param array{
      *     Initiator: string,
-     *     SecurityCredential: string,
      *     CommandID: "TransactionStatusQuery",
      *     TransactionID: string,
      *     PartyA: numeric-string,
@@ -204,7 +197,6 @@ interface Client
      *
      * @param array{
      *     Initiator: string,
-     *     SecurityCredential: string,
      *     CommandID: "TransactionReversal",
      *     TransactionID: string,
      *     Amount: positive-int,

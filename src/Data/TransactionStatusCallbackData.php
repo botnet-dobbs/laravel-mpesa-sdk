@@ -2,7 +2,9 @@
 
 namespace Botnetdobbs\Mpesa\Data;
 
-class TransactionStatusCallbackData extends BaseMpesaCallbackData implements \Botnetdobbs\Mpesa\Contracts\TransactionStatusCallback
+use Botnetdobbs\Mpesa\Contracts\TransactionStatusCallback;
+
+class TransactionStatusCallbackData extends BaseMpesaCallbackData implements TransactionStatusCallback
 {
     public function __construct(
         public int $ResultType,
