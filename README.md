@@ -50,11 +50,37 @@ For the cerfiticate, [Download](https://developer.safaricom.co.ke/Documentation)
 return [
     "consumer_key" => env("MPESA_CONSUMER_KEY"),
     "consumer_secret" => env("MPESA_CONSUMER_SECRET"),
-    "lipa_na_mpesa_passkey" => env("MPESA_LIPA_NA_MPESA_PASSKEY", "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"),  // default set for sandbox testing
-    "initiator_password" => env("MPESA_INITIATOR_PASSWORD"),
+    "lipa_na_mpesa_passkey" => env(
+        "MPESA_LIPA_NA_MPESA_PASSKEY",
+        "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
+    ),
     "certificate_path" => env("MPESA_CERTIFICATE_PATH"),
     "environment" => env("MPESA_ENV", "sandbox"),
+    "initiator" => [
+        'name' => env("MPESA_INITIATOR_NAME"),
+        'password' => env("MPESA_INITIATOR_PASSWORD"),
+    ],
+    "callbacks" => [
+        "base_url" => env("MPESA_CALLBACK_BASE_URL", "https://example.com"),
+        "paths" => [
+            "stk" => [
+                "result" => "/api/mpesa/callback/stk",
+            ],
+            "b2c" => [
+                "result" => "/api/mpesa/callback/b2c",
+                "timeout" => "/api/mpesa/callback/b2c/timeout",
+            ],
+            // Add more callback paths here
+        ]
+    ],
+    "business" => [
+        "short_codes" => [
+            "default" => env("MPESA_SHORT_CODE"),
+            "till" => env("MPESA_TILL_NUMBER"),
+            "paybill" => env("MPESA_PAYBILL_NUMBER"),
+        ],
 
+    ],
     "defaults" => [
         "timeout" => 30,
         "connect_timeout" => 10,
@@ -90,7 +116,7 @@ $response = $this->mpesaClient->stkPush([
     "TransactionType" => "CustomerPayBillOnline",    // or CustomerBuyGoodsOnline
     "Amount" => 1,
     "PhoneNumber" => "254722000000", // The Mobile Number to receive the STK Pin Prompt.
-    "CallBackURL" => "https://example.com/callback",    // Valid secure URL that is used to receive notifications from M-Pesa API.
+    "CallBackURL" => config('mpesa.callbacks.base_url', "https://example.com") . config('mpesa.callbacks.paths.stk_push.result', "/callback"),    // Valid secure URL that is used to receive notifications from M-Pesa API.
     "AccountReference" => "Test",
     "TransactionDesc" => "Test Payment"
 ]);
