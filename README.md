@@ -270,16 +270,14 @@ use App\Http\Controllers\MpesaCallbackController;
 
 Route::prefix('mpesa/callback')->group(function () {
     Route::post('stkpush', [MpesaCallbackController::class, 'handleStkCallback']);
-    Route::post('b2c', [MpesaCallbackController::class, 'handleB2cCallback']);
-    Route::post('transaction-status', [MpesaCallbackController::class, 'handleTransactionStatusCallback']);
-    Route::post('account-balance', [MpesaCallbackController::class, 'handleAccountBalanceCallback']);
-    Route::post('reversal', [MpesaCallbackController::class, 'handleReversalCallback']);
 });
 ```
 
 ### Create Callback Controller
 
 Create a controller to handle M-Pesa callbacks:
+
+You can use the provided `CallbackProcessor` which wraps the callback data in a TransactionResult object as shown below, or you can handle the raw data directly.
 
 ```php
 namespace App\Http\Controllers;
@@ -300,22 +298,23 @@ class MpesaCallbackController extends Controller
     public function handleStkCallback(Request $request): Response
     {
         try {
-            $callback = $this->processor->handleStkCallback($request);
+            $result = $this->processor->handleStkCallback($request);
 
-            if ($callback->isSuccessful()) {
-                // Process successful payment
-                Log::info('STK Push payment successful', [
-                    'receipt' => $callback->getReceiptNumber(),
-                    'amount' => $callback->getAmount(),
-                    'phone' => $callback->getPhoneNumber(),
-                    'date' => $callback->getTransactionDate()
-                ]);
+            if ($result->isSuccessful()) {
+                $data = $result->getData();
+
+                if (isset($data->Body->stkCallback)) {
+                    Log::info('STK Push payment successful', [
+                        'merchantRequestId' => $data->Body->stkCallback->MerchantRequestID,
+                        'checkoutRequestId' => $data->Body->stkCallback->CheckoutRequestID,
+                    ]);
+                }
                 
                 // Update your database, trigger events, etc.
                 return $this->responder->success('Payment processed');
             } 
             Log::warning('STK Push payment failed', [
-                'code' => $callback->getResultCode(),
+                'code' => $result->getResultCode(),
                 'description' => $callback->getResultDescription()
             ]);
 
@@ -332,73 +331,18 @@ class MpesaCallbackController extends Controller
 }
 ```
 
+
 ### Available Callback Methods
 
 Each callback type provides specific methods to access the payment data:
 
 #### Common Methods Available in All Callbacks
 ```php
-$callback->isSuccessful(): bool
-$callback->getResultCode(): int
-$callback->getResultType(): int         // Except STK Push
-$callback->getResultDescription(): string
-$callback->getConversationId(): string  // Except STK Push
-$callback->getTransactionId(): string   // Except STK Push
-$callback->getOriginatorConversationId(): string // Except STK Push
-```
-
-#### STK Push Callback
-```php
-$callback->getAmount(): ?float
-$callback->getReceiptNumber(): ?string
-$callback->getTransactionDate(): ?string
-$callback->getPhoneNumber(): ?string
-$callback->getMerchantRequestId(): string
-$callback->getCheckoutRequestId(): string
-```
-
-#### B2C Callback
-```php
-$callback->getTransactionAmount(): ?float
-$callback->getTransactionReceipt(): ?string
-$callback->getB2CRecipientIsRegisteredCustomer(): ?string
-$callback->getReceiverPartyPublicName(): ?string
-$callback->getTransactionCompletedDateTime(): ?string
-$callback->getB2CUtilityAccountAvailableFunds(): ?float
-$callback->getB2CWorkingAccountAvailableFunds(): ?float
-$callback->getB2CChargesPaidAccountAvailableFunds(): ?float
-```
-
-#### Account Balance Callback
-```php
-$callback->getAccountBalances(): array  // Returns array of all accounts with their balances
-$callback->getBalanceForAccount(string $accountName): ?array  // Get balance for specific account
-$callback->getCompletedTime(): ?string
-```
-
-#### Transaction Status Callback
-```php
-$callback->getTransactionStatus(): ?string
-$callback->getAmount(): ?float
-$callback->getReceiptNumber(): ?string
-$callback->getDebitPartyNames(): ?array
-$callback->getInitiatedTime(): ?string
-$callback->getFinalisedTime(): ?string
-$callback->getDebitAccountType(): ?string
-$callback->getDebitPartyCharges(): array
-$callback->getDebitPartyCharge(): ?array
-```
-
-#### Reversal Callback
-```php
-$callback->getAmount(): ?float
-$callback->getOriginalTransactionID(): ?string
-$callback->getDebitAccountBalances(): array
-$callback->getDebitAccountBalance(string $account): array
-$callback->getTransactionCompletedTime(): ?string
-$callback->getCharge(): ?float
-$callback->getCreditPartyPublicName(): ?string
-$callback->getDebitPartyPublicName(): ?string
+$result->getData(): object
+$result->isSuccessful(): bool
+$result->getResultCode(): int
+$result->getResultType(): int         // Except STK Push
+$result->getResultDescription(): string
 ```
 
 The `CallbackResponder` provides two methods:
