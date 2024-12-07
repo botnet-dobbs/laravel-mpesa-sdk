@@ -2,7 +2,9 @@
 
 namespace Botnetdobbs\Mpesa\Http;
 
+use Botnetdobbs\Mpesa\Contracts\Response;
 use Botnetdobbs\Mpesa\Contracts\Client;
+use Botnetdobbs\Mpesa\Data\Api\MpesaResponse;
 use Botnetdobbs\Mpesa\Enums\MpesaRequestType;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
@@ -10,7 +12,7 @@ use Botnetdobbs\Mpesa\Exceptions\MpesaException;
 use Botnetdobbs\Mpesa\Services\InitiatorCredentialGenerator;
 use Botnetdobbs\Mpesa\Validation\RequestValidator;
 use Illuminate\Cache\CacheManager;
-use Illuminate\Http\Client\Response;
+use Illuminate\Http\Client\Response as HttpResponse;
 
 class MpesaClient implements Client
 {
@@ -119,7 +121,10 @@ class MpesaClient implements Client
         return Http::withToken($this->getAccessToken())
             ->timeout((int) config('mpesa.defaults.timeout'))
             ->connectTimeout((int) config('mpesa.defaults.connect_timeout'))
-            ->baseUrl($this->getBaseUrl());
+            ->baseUrl($this->getBaseUrl())
+            ->throw(function (HttpResponse $response) {
+                throw new MpesaException('Mpesa API request failed: ' . $response->body());
+            });
     }
 
     /**
@@ -137,28 +142,22 @@ class MpesaClient implements Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     MerchantRequestID: string,
-     *     CheckoutRequestID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     *     CustomerMessage: string
-     * } Safaricom API response
+     * @return Response
      */
-    public function stkPush(array $data): object
+    public function stkPush(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::STK_PUSH, $data);
 
-        $response = $this->client()->post($this->getEndpoint('stk_push'), array_merge([
-            'BusinessShortCode' => $data['BusinessShortCode'],
-            'Password' => $this->generatePassword($data['BusinessShortCode']),
-            'Timestamp' => now()->format('YmdHis'),
-            'TransactionType' => 'CustomerPayBillOnline',
-            'PartyA' => $data['PhoneNumber'],
-            'PartyB' => $data['BusinessShortCode'],
-        ], $data));
-
-        return $this->handleResponse($response);
+        return new MpesaResponse(
+            $this->client()->post($this->getEndpoint('stk_push'), array_merge([
+                'BusinessShortCode' => $data['BusinessShortCode'],
+                'Password' => $this->generatePassword($data['BusinessShortCode']),
+                'Timestamp' => now()->format('YmdHis'),
+                'TransactionType' => 'CustomerPayBillOnline',
+                'PartyA' => $data['PhoneNumber'],
+                'PartyB' => $data['BusinessShortCode'],
+            ], $data))
+        );
     }
 
     /**
@@ -171,25 +170,18 @@ class MpesaClient implements Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     *     MerchantRequestID: string,
-     *     CheckoutRequestID: string,
-     *     ResultCode: string,
-     *     ResultDesc: string
-     * } Transaction status response
+     * @return Response
      */
-    public function stkQuery(array $data): object
+    public function stkQuery(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::STK_QUERY, $data);
 
-        $response = $this->client()->post($this->getEndpoint('stk_query'), array_merge([
-            'Password' => $this->generatePassword($data['BusinessShortCode']),
-            'Timestamp' => now()->format('YmdHis'),
-        ], $data));
-
-        return $this->handleResponse($response);
+        return new MpesaResponse(
+            $this->client()->post($this->getEndpoint('stk_query'), array_merge([
+                'Password' => $this->generatePassword($data['BusinessShortCode']),
+                'Timestamp' => now()->format('YmdHis'),
+            ], $data))
+        );
     }
 
     /**
@@ -210,21 +202,17 @@ class MpesaClient implements Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     ConversationID: string,
-     *     OriginatorConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string
-     * } Safaricom API response
+     * @return Response
      */
-    public function b2c(array $data): object
+    public function b2c(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::B2C, $data);
 
         $data['SecurityCredential'] = $this->credentialGenerator->generate();
-        $response = $this->client()->post($this->getEndpoint('b2c_payment'), $data);
 
-        return $this->handleResponse($response);
+        return new MpesaResponse(
+            $this->client()->post($this->getEndpoint('b2c_payment'), $data)
+        );
     }
 
     /**
@@ -242,19 +230,17 @@ class MpesaClient implements Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     code: string,
-     *     status: string
-     * } Safaricom API response
+     * @return Response
      */
-    public function b2b(array $data): object
+    public function b2b(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::B2B, $data);
 
         $data['SecurityCredential'] = $this->credentialGenerator->generate();
-        $response = $this->client()->post($this->getEndpoint('b2b_payment'), $data);
 
-        return $this->handleResponse($response);
+        return new MpesaResponse(
+            $this->client()->post($this->getEndpoint('b2b_payment'), $data)
+        );
     }
 
     /**
@@ -269,19 +255,15 @@ class MpesaClient implements Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorCoversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string
-     * } Registration response
+     * @return Response
      */
-    public function c2bRegister(array $data): object
+    public function c2bRegister(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::C2B_REGISTER, $data);
 
-        $response = $this->client()->post($this->getEndpoint('c2b_register'), $data);
-
-        return $this->handleResponse($response);
+        return new MpesaResponse(
+            $this->client()->post($this->getEndpoint('c2b_register'), $data)
+        );
     }
 
     /**
@@ -297,19 +279,15 @@ class MpesaClient implements Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string
-     * } Simulation response
+     * @return Response
      */
-    public function c2bSimulate(array $data): object
+    public function c2bSimulate(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::C2B_SIMULATE, $data);
 
-        $response = $this->client()->post($this->getEndpoint('c2b_simulate'), $data);
-
-        return $this->handleResponse($response);
+        return new MpesaResponse(
+            $this->client()->post($this->getEndpoint('c2b_simulate'), $data)
+        );
     }
 
     /**
@@ -327,21 +305,17 @@ class MpesaClient implements Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorConversationID: string,
-     *     ConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     * } Balance query response
+     * @return Response
      */
-    public function accountBalance(array $data): object
+    public function accountBalance(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::ACCOUNT_BALANCE, $data);
 
         $data['SecurityCredential'] = $this->credentialGenerator->generate();
-        $response = $this->client()->post($this->getEndpoint('account_balance'), $data);
 
-        return $this->handleResponse($response);
+        return new MpesaResponse(
+            $this->client()->post($this->getEndpoint('account_balance'), $data)
+        );
     }
 
     /**
@@ -361,21 +335,17 @@ class MpesaClient implements Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorConversationID: string,
-     *     ConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     * } Transaction status response
+     * @return Response
      */
-    public function transactionStatus(array $data): object
+    public function transactionStatus(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::TRANSACTION_STATUS, $data);
 
         $data['SecurityCredential'] = $this->credentialGenerator->generate();
-        $response = $this->client()->post($this->getEndpoint('transaction_status'), $data);
 
-        return $this->handleResponse($response);
+        return new MpesaResponse(
+            $this->client()->post($this->getEndpoint('transaction_status'), $data)
+        );
     }
 
     /**
@@ -396,21 +366,17 @@ class MpesaClient implements Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorConversationID: string,
-     *     ConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     * } Reversal response
+     * @return Response
      */
-    public function reversal(array $data): object
+    public function reversal(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::REVERSAL, $data);
 
         $data['SecurityCredential'] = $this->credentialGenerator->generate();
-        $response = $this->client()->post($this->getEndpoint('reversal'), $data);
 
-        return $this->handleResponse($response);
+        return new MpesaResponse(
+            $this->client()->post($this->getEndpoint('reversal'), $data)
+        );
     }
 
     /**
@@ -423,20 +389,5 @@ class MpesaClient implements Client
         $passkey = config('mpesa.lipa_na_mpesa_passkey');
         $timestamp = now()->format('YmdHis');
         return base64_encode($shortcode . $passkey . $timestamp);
-    }
-
-    /**
-     * @param Response $response
-     * @return object
-     *
-     * @throws MpesaException
-     */
-    private function handleResponse(Response $response): object
-    {
-        if (!$response->successful()) {
-            throw new MpesaException('Mpesa API request failed: ' . $response->body());
-        }
-
-        return $response->object();
     }
 }

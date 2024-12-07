@@ -3,6 +3,7 @@
 namespace Botnetdobbs\Mpesa\Contracts;
 
 use Botnetdobbs\Mpesa\Exceptions\MpesaException;
+use Botnetdobbs\Mpesa\Contracts\Response;
 
 interface Client
 {
@@ -21,15 +22,9 @@ interface Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     MerchantRequestID: string,
-     *     CheckoutRequestID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     *     CustomerMessage: string
-     * } Safaricom API response
+     * @return Response
      */
-    public function stkPush(array $data): object;
+    public function stkPush(array $data): Response;
 
     /**
      * Query the status of an STK Push transaction
@@ -41,16 +36,9 @@ interface Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     *     MerchantRequestID: string,
-     *     CheckoutRequestID: string,
-     *     ResultCode: string,
-     *     ResultDesc: string
-     * } Transaction status response
+     * @return Response
      */
-    public function stkQuery(array $data): object;
+    public function stkQuery(array $data): Response;
 
     /**
      * Initiates a Business to Customer (B2C) payment
@@ -70,14 +58,9 @@ interface Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     ConversationID: string,
-     *     OriginatorConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string
-     * } Safaricom API response
+     * @return Response
      */
-    public function b2c(array $data): object;
+    public function b2c(array $data): Response;
 
     /**
      * Initiates a Business to Business (B2B) payment
@@ -94,12 +77,9 @@ interface Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     code: string,
-     *     status: string
-     * } Safaricom API response
+     * @return Response
      */
-    public function b2b(array $data): object;
+    public function b2b(array $data): Response;
 
     /**
      *Register URLs for C2B (Customer to Business) payments
@@ -113,13 +93,9 @@ interface Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorCoversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string
-     * } Registration response
+     * @return Response
      */
-    public function c2bRegister(array $data): object;
+    public function c2bRegister(array $data): Response;
 
     /**
      * Simulate a C2B (Customer to Business) payment (Test environment only)
@@ -134,13 +110,9 @@ interface Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string
-     * } Simulation response
+     * @return Response
      */
-    public function c2bSimulate(array $data): object;
+    public function c2bSimulate(array $data): Response;
 
     /**
      * Query account balance
@@ -157,14 +129,9 @@ interface Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorConversationID: string,
-     *     ConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     * } Balance query response
+     * @return Response
      */
-    public function accountBalance(array $data): object;
+    public function accountBalance(array $data): Response;
 
     /**
      * Check the status of a transaction
@@ -183,14 +150,9 @@ interface Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorConversationID: string,
-     *     ConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     * } Transaction status response
+     * @return Response
      */
-    public function transactionStatus(array $data): object;
+    public function transactionStatus(array $data): Response;
 
     /**
      * Reverse a completed M-Pesa transaction
@@ -210,12 +172,7 @@ interface Client
      *
      * @throws MpesaException
      *
-     * @return object{
-     *     OriginatorConversationID: string,
-     *     ConversationID: string,
-     *     ResponseCode: string,
-     *     ResponseDescription: string,
-     * } Reversal response
+     * @return Response
      */
-    public function reversal(array $data): object;
+    public function reversal(array $data): Response;
 }

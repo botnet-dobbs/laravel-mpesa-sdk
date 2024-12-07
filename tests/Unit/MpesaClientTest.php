@@ -60,7 +60,8 @@ class MpesaClientTest extends TestCase
             'Amount' => 1,
             'PhoneNumber' => '254722188188',
             'CallBackURL' => 'https://example.com/callback',
-        ]);
+        ])
+        ->getData();
 
         Http::assertSent(function ($request) {
             return $request->hasHeader('Authorization', 'Bearer test_token');
@@ -98,7 +99,8 @@ class MpesaClientTest extends TestCase
             'Amount' => 1,
             'PhoneNumber' => '254722188188',
             'CallBackURL' => 'https://example.com/callback',
-        ]);
+        ])
+        ->getData();
 
         $this->assertEquals('Failed', $response->ResponseDescription);
     }
@@ -121,7 +123,8 @@ class MpesaClientTest extends TestCase
         $response = $this->mpesaClient->stkQuery([
             'BusinessShortCode' => '174379',
             'CheckoutRequestID' => 'test_checkout_id',
-        ]);
+        ])
+        ->getData();
 
         $this->assertEquals('The service request has been accepted successfully', $response->ResponseDescription);
         $this->assertEquals('The service request is processed successfully.', $response->ResultDesc);
@@ -153,7 +156,8 @@ class MpesaClientTest extends TestCase
             'QueueTimeOutURL' => 'https://example.com/timeout',
             'ResultURL' => 'https://example.com/result',
             'Occasion' => 'test_occasion',
-        ]);
+        ])
+        ->getData();
 
         Http::assertSent(function ($request) {
             return $request->hasHeader('Authorization', 'Bearer test_token');
@@ -182,7 +186,8 @@ class MpesaClientTest extends TestCase
             'callbackUrl' => 'https://example.com/callback',
             'partnerName' => 'Vendor',
             'RequestRefID' => 'test_request_id',
-        ]);
+        ])
+        ->getData();
 
         Http::assertSent(function ($request) {
             return $request->hasHeader('Authorization', 'Bearer test_token');
@@ -208,7 +213,8 @@ class MpesaClientTest extends TestCase
             'ResponseType' => 'Completed',
             'ConfirmationURL' => 'https://example.com/confirm',
             'ValidationURL' => 'https://example.com/validate',
-        ]);
+        ])
+        ->getData();
 
         Http::assertSent(function ($request) {
             return $request->hasHeader('Authorization', 'Bearer test_token');
@@ -234,7 +240,8 @@ class MpesaClientTest extends TestCase
             'Amount' => 1,
             'Msisdn' => '254722188188',
             'BillRefNumber' => 'test_bill_ref',
-        ]);
+        ])
+        ->getData();
 
         Http::assertSent(function ($request) {
             return $request->hasHeader('Authorization', 'Bearer test_token');
@@ -264,7 +271,8 @@ class MpesaClientTest extends TestCase
             'Remarks' => 'test_remark',
             'QueueTimeOutURL' => 'https://example.com/timeout',
             'ResultURL' => 'https://example.com/result',
-        ]);
+        ])
+        ->getData();
 
         Http::assertSent(function ($request) {
             return $request->hasHeader('Authorization', 'Bearer test_token');
@@ -295,7 +303,8 @@ class MpesaClientTest extends TestCase
             'ResultURL' => 'https://example.com/result',
             'QueueTimeOutURL' => 'https://example.com/timeout',
             'Remarks' => 'test_remark',
-        ]);
+        ])
+        ->getData();
 
         $this->assertEquals('0', $response->ResponseCode);
         $this->assertEquals('Accept the service request successfully.', $response->ResponseDescription);
@@ -324,7 +333,8 @@ class MpesaClientTest extends TestCase
             'QueueTimeOutURL' => 'https://example.com/timeout',
             'Remarks' => 'test_remark',
             'Occasion' => 'test_occasion',
-        ]);
+        ])
+        ->getData();
 
         $this->assertEquals('0', $response->ResponseCode);
         $this->assertEquals('Accept the service request successfully.', $response->ResponseDescription);

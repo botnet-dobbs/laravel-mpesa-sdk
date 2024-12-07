@@ -216,15 +216,28 @@ $response = $this->mpesaClient->reversal([
 ```
 
 ### Response Handling
-All methods return a standard object containing the M-Pesa API response. Example success response:
+All methods return a standard Response with the following methods:
 
 ```php
-$response = $this->mpesaClient->stkPush([...]);
+// Get the raw response data
+$data = $response->getData();
 
-// Access response properties
-echo $response->MerchantRequestID;
-echo $response->CheckoutRequestID;
-echo $response->ResponseDescription;
+// Check if the request was successful
+$isSuccessful = $response->isSuccessful();
+
+// Get specific response fields
+$code = $response->getResponseCode();
+$description = $response->getResponseDescription();
+```
+
+### Example Usage
+```php
+$response = $this->mpesaClient->stkPush([...]);
+$data = $response->getData();
+
+// Access properties using object syntax
+$merchantRequestId = $data->MerchantRequestID;
+$checkoutRequestId = $data->CheckoutRequestID;
 ```
 
 ## Error Handling
@@ -235,6 +248,9 @@ The package throws `MpesaException` for various error scenarios:
 use Botnetdobbs\Mpesa\Exceptions\MpesaException;
 try {
     $response = $this->mpesaClient->stkPush([...]);
+    if ($response->isSuccessful()) {
+        $data = $response->getData();
+    }
 } catch (MpesaException $e) {
     // Handle the error
     logger()->error("M-Pesa error: " . $e->getMessage());

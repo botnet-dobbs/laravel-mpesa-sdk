@@ -9,7 +9,6 @@ use Botnetdobbs\Mpesa\Contracts\Callbacks\{
     AccountBalanceCallback,
     ReversalCallback
 };
-
 use Illuminate\Http\Request;
 
 interface CallbackProcessor
