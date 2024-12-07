@@ -2,7 +2,7 @@
 
 namespace Botnetdobbs\Mpesa\Tests\Unit;
 
-use Botnetdobbs\Mpesa\Http\Callbacks\Responses\FailedResponse;
+use Botnetdobbs\Mpesa\Http\Callbacks\FailedResponse;
 use Botnetdobbs\Mpesa\Tests\TestCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

@@ -2,11 +2,11 @@
 
 namespace Botnetdobbs\Mpesa\Tests\Unit;
 
-use Botnetdobbs\Mpesa\Contracts\AccountBalanceCallback;
-use Botnetdobbs\Mpesa\Contracts\B2CCallback;
-use Botnetdobbs\Mpesa\Contracts\ReversalCallback;
-use Botnetdobbs\Mpesa\Contracts\StkCallback;
-use Botnetdobbs\Mpesa\Contracts\TransactionStatusCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\AccountBalanceCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\B2CCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\ReversalCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\StkCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\TransactionStatusCallback;
 use Botnetdobbs\Mpesa\Http\Callbacks\MpesaCallback;
 use Botnetdobbs\Mpesa\Tests\TestCase;
 use Illuminate\Http\Request;

@@ -14,13 +14,13 @@ class MpesaServiceProviderTest extends TestCase
         );
 
         $this->assertInstanceOf(
-            \Botnetdobbs\Mpesa\Contracts\CallbackHandler::class,
-            app(\Botnetdobbs\Mpesa\Contracts\CallbackHandler::class)
+            \Botnetdobbs\Mpesa\Contracts\CallbackProcessor::class,
+            app(\Botnetdobbs\Mpesa\Contracts\CallbackProcessor::class)
         );
 
         $this->assertInstanceOf(
-            \Botnetdobbs\Mpesa\Contracts\ResponseHandler::class,
-            app(\Botnetdobbs\Mpesa\Contracts\ResponseHandler::class)
+            \Botnetdobbs\Mpesa\Contracts\CallbackResponder::class,
+            app(\Botnetdobbs\Mpesa\Contracts\CallbackResponder::class)
         );
     }
 

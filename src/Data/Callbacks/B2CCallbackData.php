@@ -1,8 +1,8 @@
 <?php
 
-namespace Botnetdobbs\Mpesa\Data;
+namespace Botnetdobbs\Mpesa\Data\Callbacks;
 
-use Botnetdobbs\Mpesa\Contracts\B2CCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\B2CCallback;
 
 class B2CCallbackData extends BaseMpesaCallbackData implements B2CCallback
 {

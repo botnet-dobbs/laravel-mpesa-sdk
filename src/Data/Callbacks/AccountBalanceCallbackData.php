@@ -1,8 +1,8 @@
 <?php
 
-namespace Botnetdobbs\Mpesa\Data;
+namespace Botnetdobbs\Mpesa\Data\Callbacks;
 
-use Botnetdobbs\Mpesa\Contracts\AccountBalanceCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\AccountBalanceCallback;
 
 class AccountBalanceCallbackData extends BaseMpesaCallbackData implements AccountBalanceCallback
 {

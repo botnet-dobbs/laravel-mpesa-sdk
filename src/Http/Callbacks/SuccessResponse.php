@@ -1,23 +1,22 @@
 <?php
 
-namespace Botnetdobbs\Mpesa\Http\Callbacks\Responses;
+namespace Botnetdobbs\Mpesa\Http\Callbacks;
 
 use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\JsonResponse;
 
-class FailedResponse implements Responsable
+class SuccessResponse implements Responsable
 {
     public function __construct(
-        private readonly string $message = 'Failed',
-        private readonly int $statusCode = 500
+        private readonly string $message = 'Success'
     ) {
     }
 
     public function toResponse($request): JsonResponse
     {
         return response()->json([
-            'ResultCode' => 1,
+            'ResultCode' => 0,
             'ResultDesc' => $this->message
-        ], $this->statusCode);
+        ]);
     }
 }

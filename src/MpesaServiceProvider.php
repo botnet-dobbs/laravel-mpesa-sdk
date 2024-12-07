@@ -3,8 +3,8 @@
 namespace Botnetdobbs\Mpesa;
 
 use Botnetdobbs\Mpesa\Contracts\Client;
-use Botnetdobbs\Mpesa\Contracts\CallbackHandler;
-use Botnetdobbs\Mpesa\Contracts\ResponseHandler;
+use Botnetdobbs\Mpesa\Contracts\CallbackProcessor;
+use Botnetdobbs\Mpesa\Contracts\CallbackResponder;
 use Botnetdobbs\Mpesa\Http\Callbacks\CallbackResponse;
 use Botnetdobbs\Mpesa\Http\Callbacks\MpesaCallback;
 use Illuminate\Support\ServiceProvider;
@@ -54,7 +54,7 @@ class MpesaServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->bind(CallbackHandler::class, MpesaCallback::class);
-        $this->app->bind(ResponseHandler::class, CallbackResponse::class);
+        $this->app->bind(CallbackProcessor::class, MpesaCallback::class);
+        $this->app->bind(CallbackResponder::class, CallbackResponse::class);
     }
 }

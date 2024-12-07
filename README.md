@@ -268,7 +268,8 @@ Create a controller to handle M-Pesa callbacks:
 ```php
 namespace App\Http\Controllers;
 
-use Botnetdobbs\Mpesa\Contracts\CallbackHandler;
+use Botnetdobbs\Mpesa\Contracts\CallbackProcessor;
+use Botnetdobbs\Mpesa\Contracts\CallbackResponder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -276,14 +277,14 @@ use Illuminate\Support\Facades\Log;
 class MpesaCallbackController extends Controller
 {
     public function __construct(
-        private readonly CallbackHandler $handler,
-        private readonly ResponseHandler $response
+        private readonly CallbackProcessor $processor,
+        private readonly CallbackResponder $responder
     ) {}
 
     public function handleStkCallback(Request $request): Response
     {
         try {
-            $callback = $this->handler->handleStkCallback($request);
+            $callback = $this->processor->handleStkCallback($request);
 
             if ($callback->isSuccessful()) {
                 // Process successful payment
@@ -295,19 +296,19 @@ class MpesaCallbackController extends Controller
                 ]);
                 
                 // Update your database, trigger events, etc.
-                return $this->response->success('Payment processed');
+                return $this->responder->success('Payment processed');
             } 
             Log::warning('STK Push payment failed', [
                 'code' => $callback->getResultCode(),
                 'description' => $callback->getResultDescription()
             ]);
 
-            return $this->response->success('Failed payment');
+            return $this->responder->success('Failed payment');
         } catch (\Exception $e) {
             Log::error('Error processing STK callback', [
                 'error' => $e->getMessage()
             ]);
-            return $this->response->failed('Internal server error');
+            return $this->responder->failed('Internal server error');
         }
     }
 
@@ -384,7 +385,7 @@ $callback->getCreditPartyPublicName(): ?string
 $callback->getDebitPartyPublicName(): ?string
 ```
 
-The `ResponseHandler` provides two methods:
+The `CallbackResponder` provides two methods:
 
 - `success(string $message = 'Payment processed'): Responsable` - Returns a success response with ResultCode 0
 - `failed(string $message = 'Internal server error', int $statusCode = 500): Responsable` - Returns a failure response with ResultCode 1

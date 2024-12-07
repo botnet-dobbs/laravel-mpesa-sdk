@@ -4,7 +4,7 @@ namespace Botnetdobbs\Mpesa\Contracts;
 
 use Illuminate\Contracts\Support\Responsable;
 
-interface ResponseHandler
+interface CallbackResponder
 {
     public function success(string $message = 'Accepted'): Responsable;
 

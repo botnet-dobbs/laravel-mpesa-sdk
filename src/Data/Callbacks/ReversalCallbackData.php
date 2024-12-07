@@ -1,8 +1,8 @@
 <?php
 
-namespace Botnetdobbs\Mpesa\Data;
+namespace Botnetdobbs\Mpesa\Data\Callbacks;
 
-use Botnetdobbs\Mpesa\Contracts\ReversalCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\ReversalCallback;
 
 class ReversalCallbackData extends BaseMpesaCallbackData implements ReversalCallback
 {

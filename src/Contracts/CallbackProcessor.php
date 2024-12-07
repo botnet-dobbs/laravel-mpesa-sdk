@@ -2,9 +2,17 @@
 
 namespace Botnetdobbs\Mpesa\Contracts;
 
+use Botnetdobbs\Mpesa\Contracts\Callbacks\{
+    StkCallback,
+    B2CCallback,
+    TransactionStatusCallback,
+    AccountBalanceCallback,
+    ReversalCallback
+};
+
 use Illuminate\Http\Request;
 
-interface CallbackHandler
+interface CallbackProcessor
 {
     public function handleStkCallback(Request $request): StkCallback;
 

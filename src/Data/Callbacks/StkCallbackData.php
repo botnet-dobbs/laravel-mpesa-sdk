@@ -1,8 +1,8 @@
 <?php
 
-namespace Botnetdobbs\Mpesa\Data;
+namespace Botnetdobbs\Mpesa\Data\Callbacks;
 
-use Botnetdobbs\Mpesa\Contracts\StkCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\StkCallback;
 
 class StkCallbackData extends BaseMpesaCallbackData implements StkCallback
 {

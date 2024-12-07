@@ -2,21 +2,21 @@
 
 namespace Botnetdobbs\Mpesa\Tests\Unit;
 
-use Botnetdobbs\Mpesa\Contracts\ResponseHandler;
-use Botnetdobbs\Mpesa\Http\Callbacks\Responses\FailedResponse;
-use Botnetdobbs\Mpesa\Http\Callbacks\Responses\SuccessResponse;
+use Botnetdobbs\Mpesa\Contracts\CallbackResponder;
+use Botnetdobbs\Mpesa\Http\Callbacks\FailedResponse;
+use Botnetdobbs\Mpesa\Http\Callbacks\SuccessResponse;
 use Botnetdobbs\Mpesa\Tests\TestCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CallbackResponseTest extends TestCase
 {
-    private ResponseHandler $responseHandler;
+    private CallbackResponder $responseHandler;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->responseHandler = $this->app->make(ResponseHandler::class);
+        $this->responseHandler = $this->app->make(CallbackResponder::class);
     }
 
     public function testItCanReturnCorrectInstanceOnSuccessResponse(): void

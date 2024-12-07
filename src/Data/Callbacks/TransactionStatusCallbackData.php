@@ -1,8 +1,8 @@
 <?php
 
-namespace Botnetdobbs\Mpesa\Data;
+namespace Botnetdobbs\Mpesa\Data\Callbacks;
 
-use Botnetdobbs\Mpesa\Contracts\TransactionStatusCallback;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\TransactionStatusCallback;
 
 class TransactionStatusCallbackData extends BaseMpesaCallbackData implements TransactionStatusCallback
 {

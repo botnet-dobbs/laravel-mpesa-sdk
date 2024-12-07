@@ -1,6 +1,6 @@
 <?php
 
-namespace Botnetdobbs\Mpesa\Data\Traits;
+namespace Botnetdobbs\Mpesa\Data\Callbacks\Traits;
 
 trait MpesaCallbackHelper
 {

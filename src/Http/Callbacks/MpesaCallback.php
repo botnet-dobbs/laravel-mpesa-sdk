@@ -2,15 +2,15 @@
 
 namespace Botnetdobbs\Mpesa\Http\Callbacks;
 
-use Botnetdobbs\Mpesa\Contracts\{
-    CallbackHandler,
+use Botnetdobbs\Mpesa\Contracts\CallbackProcessor;
+use Botnetdobbs\Mpesa\Contracts\Callbacks\{
     StkCallback,
     B2CCallback,
     TransactionStatusCallback,
     AccountBalanceCallback,
     ReversalCallback
 };
-use Botnetdobbs\Mpesa\Data\{
+use Botnetdobbs\Mpesa\Data\Callbacks\{
     B2CCallbackData,
     ReversalCallbackData,
     StkCallbackData,
@@ -19,7 +19,7 @@ use Botnetdobbs\Mpesa\Data\{
 };
 use Illuminate\Http\Request;
 
-class MpesaCallback implements CallbackHandler
+class MpesaCallback implements CallbackProcessor
 {
     public function handleStkCallback(Request $request): StkCallback
     {

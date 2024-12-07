@@ -1,6 +1,6 @@
 <?php
 
-namespace Botnetdobbs\Mpesa\Contracts;
+namespace Botnetdobbs\Mpesa\Contracts\Callbacks;
 
 interface StkCallback
 {
