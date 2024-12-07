@@ -11,6 +11,21 @@ return [
     "certificate_path" => env("MPESA_CERTIFICATE_PATH"),
     "environment" => env("MPESA_ENV", "sandbox"),
 
+    "callbacks" => [
+        "base_url" => env("MPESA_CALLBACK_BASE_URL", "https://example.com"),
+        "paths" => [
+            "stk" => [
+                "result" => "/api/mpesa/callback/stk",
+            ],
+            "b2c" => [
+                "result" => "/api/mpesa/callback/b2c",
+                "timeout" => "/api/mpesa/callback/b2c/timeout",
+            ],
+            // Add more callback paths here
+            // Usage: config('mpesa.callbacks.base_url') . config('mpesa.callbacks.paths.b2c.{result, timeout}')
+        ]
+    ],
+
     "defaults" => [
         "timeout" => 30,
         "connect_timeout" => 10,
