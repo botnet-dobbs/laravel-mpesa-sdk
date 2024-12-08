@@ -39,9 +39,9 @@ class MpesaResponse implements ResponseContract
     /**
      * Get response code
      *
-     * @return string
+     * @return int
      */
-    public function getResponseCode(): string
+    public function getResponseCode(): int
     {
         return $this->getData()->ResponseCode; // @phpstan-ignore-line
     }
@@ -54,5 +54,25 @@ class MpesaResponse implements ResponseContract
     public function getResponseDescription(): string
     {
         return $this->getData()->ResponseDescription; // @phpstan-ignore-line
+    }
+
+    /**
+     * Get result code
+     *
+     * @return int
+     */
+    public function getResultCode(): int
+    {
+        return $this->getData()->ResultCode; // @phpstan-ignore-line
+    }
+
+    /**
+     * Get result description
+     *
+     * @return string
+     */
+    public function getResultDescription(): string
+    {
+        return $this->getData()->ResultDesc; // @phpstan-ignore-line
     }
 }

@@ -18,13 +18,25 @@ interface Response
 
     /**
      * Get response code
-     * @return string
+     * @return int
      */
-    public function getResponseCode(): string;
+    public function getResponseCode(): int;
 
     /**
      * Get response description
      * @return string
      */
     public function getResponseDescription(): string;
+
+    /**
+     * Get result code
+     * @return int
+     */
+    public function getResultCode(): int;
+
+    /**
+     * Get result description
+     * @return string
+     */
+    public function getResultDescription(): string;
 }

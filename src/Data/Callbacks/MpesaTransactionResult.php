@@ -59,24 +59,6 @@ class MpesaTransactionResult implements TransactionResult
     }
 
     /**
-     * Get result type
-     *
-     * @return string
-     */
-    public function getResultType(): string
-    {
-        if (isset($this->data['Body']['stkCallback'])) {
-            return $this->data['Body']['stkCallback']['ResultType'] ?? '';
-        }
-
-        if (isset($this->data['Result'])) {
-            return $this->data['Result']['ResultType'] ?? '';
-        }
-
-        return '';
-    }
-
-    /**
      * Get result description
      *
      * @return string

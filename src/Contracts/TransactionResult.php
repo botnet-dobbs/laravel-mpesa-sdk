@@ -26,13 +26,6 @@ interface TransactionResult
     public function getResultCode(): int;
 
     /**
-     * Get result type
-     *
-     * @return string
-     */
-    public function getResultType(): string;
-
-    /**
      * Get result description
      *
      * @return string

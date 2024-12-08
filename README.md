@@ -246,14 +246,17 @@ All methods return a standard Response with the following methods:
 
 ```php
 // Get the raw response data
-$data = $response->getData();
+$data = $response->getData(): object
 
 // Check if the request was successful
-$isSuccessful = $response->isSuccessful();
+$isSuccessful = $response->isSuccessful(): bool
 
 // Get specific response fields
-$code = $response->getResponseCode();
-$description = $response->getResponseDescription();
+$code = $response->getResponseCode(): int
+$description = $response->getResponseDescription(): string
+
+$resultCode = $response->getResultCode(): int // STK Query
+$resultDescription = $response->getResultDescription(): string // STK Query
 ```
 
 ### Example Usage
@@ -364,10 +367,9 @@ Each callback type provides specific methods to access the payment data:
 
 #### Common Methods Available in All Callbacks
 ```php
-$result->getData(): object
+$result->getData(): object // Get the raw callback data.
 $result->isSuccessful(): bool
 $result->getResultCode(): int
-$result->getResultType(): int         // Except STK Push
 $result->getResultDescription(): string
 ```
 
