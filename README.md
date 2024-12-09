@@ -35,10 +35,12 @@ Add the following variables to your `.env` file:
 MPESA_CONSUMER_KEY=your_consumer_key
 MPESA_CONSUMER_SECRET=your_consumer_secret
 MPESA_LIPA_NA_MPESA_PASSKEY=your_lipa_na_mpesa_passkey
+MPESA_INITIATOR_NAME=your_initiator_name
 MPESA_INITIATOR_PASSWORD=your_initiator_password
 MPESA_CERTIFICATE_PATH=your_downloaded_mpesa_certificate_path
 MPESA_ENV=sandbox  # or "live" for production
 ```
+More can be added as per the config file below.
 
 ### Configuration Options
 
