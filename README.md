@@ -12,6 +12,7 @@ For the most current API documentation and updates, always refer to the [Safaric
 |------------------|
 | Laravel 10.x     |
 | Laravel 11.x     |
+| Laravel 12.x     |
 
 ## Installation
 
