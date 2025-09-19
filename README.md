@@ -1,5 +1,8 @@
 # Laravel M-Pesa Integration Package
 
+[![build](https://github.com/botnet-dobbs/laravel-mpesa-sdk/actions/workflows/main.yml/badge.svg)](https://github.com/botnet-dobbs/laravel-mpesa-sdk/actions/workflows/main.yml) ![Packagist Downloads](https://img.shields.io/packagist/dt/botnetdobbs/laravel-mpesa-sdk)
+
+
 Laravel package for integrating with Safaricom"s M-Pesa payment gateway. Supports STK Push, B2C, B2B, balance queries, transaction status checks, and payment reversals.
 
 For the most current API documentation and updates, always refer to the [Safaricom Developer Portal](https://developer.safaricom.co.ke/APIs).
