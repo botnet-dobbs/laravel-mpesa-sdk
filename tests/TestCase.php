@@ -8,6 +8,14 @@ use Illuminate\Support\Facades\Http;
 
 class TestCase extends OrchestraTestCase
 {
+    /**
+     * Laravel 11 / Orchestra Testbench / PHPUnit 10 compatibility workaround.
+     *
+     * This static property Without it, tests fail with:
+     * "Access to undeclared static property TestCase::$latestResponse"
+     */
+    protected static mixed $latestResponse = null;
+
     protected function getPackageProviders($app): array
     {
         return [
