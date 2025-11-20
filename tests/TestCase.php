@@ -19,7 +19,7 @@ class TestCase extends OrchestraTestCase
     {
         $app['config']->set('mpesa.consumer_key', 'test_consumer_key');
         $app['config']->set('mpesa.consumer_secret', 'test_consumer_secret');
-        $app['config']->set('mpesa.initiator_password', 'test_initiator_password');
+        $app['config']->set('mpesa.initiator.password', 'test_initiator_password');
         $app['config']->set('mpesa.lipa_na_mpesa_passkey', 'test_lipa_na_mpesa_passkey');
         $app['config']->set('mpesa.certificate_path', '');
         $app['config']->set('mpesa.environment', 'sandbox');

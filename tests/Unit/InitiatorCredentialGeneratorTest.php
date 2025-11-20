@@ -5,7 +5,6 @@ namespace Botnetdobbs\Mpesa\Tests\Unit;
 use Botnetdobbs\Mpesa\Services\InitiatorCredentialGenerator;
 use Botnetdobbs\Mpesa\Tests\TestCase;
 use InvalidArgumentException;
-use RuntimeException;
 
 class InitiatorCredentialGeneratorTest extends TestCase
 {
@@ -33,15 +32,19 @@ class InitiatorCredentialGeneratorTest extends TestCase
             "digest_alg" => "sha256",
             "private_key_bits" => 2048,
             "private_key_type" => OPENSSL_KEYTYPE_RSA,
+            "config" => "/etc/ssl/openssl.cnf",   
         ];
 
         $key = openssl_pkey_new($config);
-        $csr = openssl_csr_new([], $key);
-        $cert = openssl_csr_sign($csr, null, $key, 365);
+        $csr = openssl_csr_new([], $key, $config);
+        $cert = openssl_csr_sign($csr, null, $key, 365, $config);
         openssl_x509_export($cert, $certOut);
         file_put_contents($this->certificatePath, $certOut);
 
-        config(['mpesa.certificate_path' => $this->certificatePath, 'mpesa.initiator_password' => 'test']);
+        config([
+            'mpesa.certificate_path' => $this->certificatePath,
+            'mpesa.initiator.password' => 'test'
+        ]);
 
         $generator = new InitiatorCredentialGenerator(app('cache'));
         $credential = $generator->generate();
@@ -53,10 +56,10 @@ class InitiatorCredentialGeneratorTest extends TestCase
     {
         config([
             'mpesa.certificate_path' => '/invalid/path',
-            'mpesa.initiator_password' => 'test'
+            'mpesa.initiator.password' => 'test'
         ]);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Mpesa certificate not found');
 
         $generator = new InitiatorCredentialGenerator(app('cache'));
@@ -67,7 +70,7 @@ class InitiatorCredentialGeneratorTest extends TestCase
     {
         config([
             'mpesa.certificate_path' => $this->certificatePath,
-            'mpesa.initiator_password' => ''
+            'mpesa.initiator.password' => ''
         ]);
 
         $this->expectException(InvalidArgumentException::class);
@@ -83,10 +86,10 @@ class InitiatorCredentialGeneratorTest extends TestCase
 
         config([
             'mpesa.certificate_path' => $this->certificatePath,
-            'mpesa.initiator_password' => 'test'
+            'mpesa.initiator.password' => 'test'
         ]);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid Mpesa certificate');
 
         $generator = new InitiatorCredentialGenerator(app('cache'));

@@ -3,7 +3,7 @@
 namespace Botnetdobbs\Mpesa\Services;
 
 use Illuminate\Cache\CacheManager;
-use RuntimeException;
+use InvalidArgumentException;
 
 class InitiatorCredentialGenerator
 {
@@ -14,7 +14,7 @@ class InitiatorCredentialGenerator
     public function __construct(private CacheManager $cache)
     {
         $this->environment = (string) config('mpesa.environment'); // @phpstan-ignore-line
-        $this->initiatorPassword = (string) config('mpesa.initiator_password'); // @phpstan-ignore-line
+        $this->initiatorPassword = (string) config('mpesa.initiator.password'); // @phpstan-ignore-line
         $this->certificatePath = (string) config('mpesa.certificate_path'); // @phpstan-ignore-line
     }
 
@@ -28,7 +28,7 @@ class InitiatorCredentialGenerator
             }
 
             if (!$this->certificatePath || !file_exists($this->certificatePath)) {
-                throw new RuntimeException('Mpesa certificate not found.');
+                throw new \InvalidArgumentException('Mpesa certificate not found.');
             }
 
             /** @var string $cert */
@@ -36,7 +36,7 @@ class InitiatorCredentialGenerator
             $pubKeyId = openssl_pkey_get_public($cert);
 
             if (!$pubKeyId) {
-                throw new RuntimeException('Invalid Mpesa certificate');
+                throw new \InvalidArgumentException('Invalid Mpesa certificate');
             }
 
             openssl_public_encrypt($this->initiatorPassword, $encrypted, $pubKeyId, OPENSSL_PKCS1_PADDING);
