@@ -29,12 +29,12 @@ return [
     "business" => [
         "short_codes" => [
             "default" => env("MPESA_SHORT_CODE"),
-            "till_number" => env("MPESA_TILL_NUMBER"),
-            "paybill_number" => env("MPESA_PAYBILL_NUMBER"),
+            "till" => env("MPESA_TILL_NUMBER"),
+            "paybill" => env("MPESA_PAYBILL_NUMBER"),
         ],
     ],
     "defaults" => [
-        "timeout" => 30,
-        "connect_timeout" => 10,
-    ]
+        "timeout" => 60,
+        "connect_timeout" => 15,
+    ],
 ];

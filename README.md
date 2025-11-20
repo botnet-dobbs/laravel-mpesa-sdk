@@ -88,8 +88,8 @@ return [
 
     ],
     "defaults" => [
-        "timeout" => 30,
-        "connect_timeout" => 10,
+        "timeout" => 60,
+        "connect_timeout" => 15,
     ]
 ];
 ```
