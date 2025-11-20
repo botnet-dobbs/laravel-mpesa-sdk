@@ -44,8 +44,8 @@ class MpesaClient implements Client
             throw new \InvalidArgumentException('Mpesa environment not configured');
         }
 
-        if (!in_array($this->environment, ['sandbox', 'production'])) {
-            throw new \InvalidArgumentException('Invalid Mpesa environment. Must be either sandbox or production');
+        if (!in_array($this->environment, ['sandbox', 'live'])) {
+            throw new \InvalidArgumentException('Invalid Mpesa environment. Must be either sandbox or live');
         }
     }
 

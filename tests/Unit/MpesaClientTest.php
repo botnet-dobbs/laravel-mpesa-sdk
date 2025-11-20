@@ -406,7 +406,7 @@ class MpesaClientTest extends TestCase
     public function testThrowsExceptionForInvalidEnvironment(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid Mpesa environment. Must be either sandbox or production');
+        $this->expectExceptionMessage('Invalid Mpesa environment. Must be either sandbox or live');
 
         new MpesaClient(
             'test_key',
