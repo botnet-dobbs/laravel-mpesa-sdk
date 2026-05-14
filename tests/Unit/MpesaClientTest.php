@@ -201,9 +201,7 @@ class MpesaClientTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider successfulApiCallsProvider
-     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('successfulApiCallsProvider')]
     public function testSuccessfullApiCalls(
         string $method,
         string $endpoint,

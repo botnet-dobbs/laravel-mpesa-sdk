@@ -162,9 +162,7 @@ class MpesaCallbackTest extends TestCase
         $this->mpesaCallback = new MpesaCallback();
     }
 
-    /**
-     * @dataProvider successfulCallbackProvider
-     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('successfulCallbackProvider')]
     public function testSuccessfulCallbacks(string $type, array $requestData): void
     {
         $request = new Request();
@@ -220,9 +218,7 @@ class MpesaCallbackTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider failedCallbackProvider
-     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('failedCallbackProvider')]
     public function testFailedCallbacks(string $type, array $requestData, int $expectedCode, string $expectedDesc): void
     {
         $request = new Request();
