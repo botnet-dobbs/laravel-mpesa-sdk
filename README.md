@@ -98,6 +98,8 @@ return [
 
 ```php
 use Botnetdobbs\Mpesa\Contracts\Client;
+use Botnetdobbs\Mpesa\Exceptions\MpesaException;
+use Illuminate\Http\JsonResponse;
 
 class PaymentController extends Controller
 {
@@ -105,9 +107,33 @@ class PaymentController extends Controller
         private readonly Client $mpesaClient
     ) {}
 
-    public function initiatePayment()
+    public function initiatePayment(): JsonResponse
     {
-        $response = $this->mpesaClient->stkPush([...]);
+        try {
+            $response = $this->mpesaClient->stkPush([...]);
+
+            if ($response->isSuccessful()) {
+                $data = $response->getData();
+                // Persist CheckoutRequestID against your order/payment record.
+                // Your callback handler uses it to match the async notification back to this transaction and to guard against duplicate processing.
+                // e.g. $payment->update(['checkout_request_id' => $data->CheckoutRequestID]);
+
+                return response()->json(['message' => 'Payment initiated successfully.']);
+            }
+
+            // M-Pesa accepted the request but returned a business-level error.
+            return response()->json(['message' => $response->getResponseDescription()], 422);
+        } catch (MpesaException $e) {
+            // Thrown on HTTP-level failures (4xx/5xx from the M-Pesa API).
+            logger()->error('mpesa.stk_push.error', ['error' => $e->getMessage()]);
+
+            return response()->json(['message' => 'Payment initiation failed. Please try again.'], 502);
+        } catch (\InvalidArgumentException $e) {
+            // Thrown when required fields are missing before the HTTP call is made.
+            logger()->error('mpesa.stk_push.validation', ['error' => $e->getMessage()]);
+
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
     }
 }
 
@@ -294,33 +320,69 @@ try {
 
 ## Callback Handling
 
-The package provides callback handling system for processing M-Pesa payment notifications. 
+M-Pesa calls your `CallBackURL` / `ResultURL` asynchronously after processing a transaction.
 
-### Setup Callback Routes
+### Recommended Processing Pipeline
 
-Register the callback routes in your `routes/api.php`:
+```
+Safaricom Callback
+    ↓
+Log + persist raw request           ← do this before anything else
+    ↓
+Return HTTP 200 + ResultCode 0      ← release Safaricom immediately
+    ↓
+Dispatch queue job
+    ↓
+Idempotency check                   ← skip if already handled
+    ↓
+Apply business logic
+    ↓
+Mark processed / failed / reconciled
+```
+
+Your callback endpoint has one job: confirm receipt and hand off. All actual processing happens in the background.
+
+### Payment State Lifecycle
+
+Track each payment through clear, explicit states. Always set a status rather than guessing it from missing records.
+
+| State | Meaning |
+|---|---|
+| `received` | Callback saved to the database, not yet processed |
+| `queued` | Handed off to a background job |
+| `processed` | Payment confirmed and order fulfilled |
+| `failed` | M-Pesa reported a failure (wrong PIN, insufficient funds, cancelled) |
+| `reconciled` | Status confirmed later via `transactionStatus()` after a timeout or mismatch |
+
+### Production Rules
+
+- **Save the raw payload before doing anything else.** If something breaks after you respond to Safaricom, this saved copy is how you recover. Store `$request->getContent()` or `$request->all()` as-is.
+- **Write a log entry the moment the request arrives.** If a background job fails silently, the log confirms the callback was received and gives you enough context to replay it.
+- **Use `$responder->success()` even when a payment fails.** A wrong PIN or cancelled payment is not your server failing. It is Safaricom reporting the outcome. Use `$responder->failed()` only when your server itself could not handle the request, for example a broken payload or a failed security check.
+- **Callback handling must be idempotent.** Safaricom can send the same callback more than once. Before doing any work, check the `CheckoutRequestID` or `ConversationID` against your records and skip if it was already handled.
+
+### Route Setup
+
+Register callback routes in `routes/api.php`. Routes defined here are already exempt from CSRF verification.
 
 ```php
 use App\Http\Controllers\MpesaCallbackController;
 
 Route::prefix('mpesa/callback')->group(function () {
-    Route::post('stkpush', [MpesaCallbackController::class, 'handleStkCallback']);
+    Route::post('stk', [MpesaCallbackController::class, 'handleStkCallback']);
+    Route::post('b2c/result', [MpesaCallbackController::class, 'handleB2cResult']);
 });
 ```
 
-### Create Callback Controller
-
-Create a controller to handle M-Pesa callbacks:
-
-You can use the provided `CallbackProcessor` which wraps the callback data in a TransactionResult object as shown below, or you can handle the raw data directly.
+### MpesaCallbackController
 
 ```php
 namespace App\Http\Controllers;
 
 use Botnetdobbs\Mpesa\Contracts\CallbackProcessor;
 use Botnetdobbs\Mpesa\Contracts\CallbackResponder;
+use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 class MpesaCallbackController extends Controller
@@ -330,77 +392,88 @@ class MpesaCallbackController extends Controller
         private readonly CallbackResponder $responder
     ) {}
 
-    public function handleStkCallback(Request $request): Response
+    public function handleStkCallback(Request $request): Responsable
     {
+        // 1. Log and save the raw request body before doing anything else.
+        //    If something breaks after you respond, this is how you recover.
+        Log::info('mpesa.stk_callback.received', ['payload' => $request->all()]);
+        // e.g. MpesaRawCallback::create(['payload' => $request->getContent(), 'type' => 'stk']);
+
         try {
-            $result = $this->processor->handleStkCallback($request);
+            $result = $this->processor->handle($request);
+
+            $data = $result->getData();
+            $checkoutRequestId = $data->Body->stkCallback->CheckoutRequestID ?? null;
+
+            // 2. Idempotency check: verify this CheckoutRequestID has not been processed before.
+            //    Safaricom can send the same callback more than once, so skip duplicates.
+            //    e.g. if (Payment::where('checkout_request_id', $checkoutRequestId)->exists()) { ... }
+
+            // 3. Hand off to a background job for all database writes and business logic.
+            //    Set the payment status to 'queued' now. The job will update it to
+            //    'processed', 'failed', or 'reconciled' when it runs.
+            //    e.g. ProcessStkCallback::dispatch($request->all());
+            //    e.g. $payment->update(['status' => 'queued']);
 
             if ($result->isSuccessful()) {
-                $data = $result->getData();
-
-                if (isset($data->Body->stkCallback)) {
-                    Log::info('STK Push payment successful', [
-                        'merchantRequestId' => $data->Body->stkCallback->MerchantRequestID,
-                        'checkoutRequestId' => $data->Body->stkCallback->CheckoutRequestID,
-                    ]);
-                }
-                
-                // Update your database, trigger events, etc.
-                return $this->responder->success('Payment processed');
-            } 
-            Log::warning('STK Push payment failed', [
-                'code' => $result->getResultCode(),
-                'description' => $callback->getResultDescription()
+                // Safaricom confirmed the customer completed the payment.
+                // Let the background job handle fulfillment.
+                Log::info('mpesa.stk.completed', [
+                    'checkout_request_id' => $checkoutRequestId,
+                    'merchant_request_id' => $data->Body->stkCallback->MerchantRequestID ?? null,
+                ]);
+            } else {
+                // The payment did not go through. The customer may have cancelled,
+                // entered the wrong PIN, or had insufficient funds.
+                // Safaricom still delivered the notification successfully, so return
+                // success() below. Mark the payment as 'failed' inside your job.
+                Log::warning('mpesa.stk.business_failure', [
+                    'checkout_request_id' => $checkoutRequestId,
+                    'result_code'         => $result->getResultCode(),
+                    'result_description'  => $result->getResultDescription(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('mpesa.stk_callback.error', [
+                'error'   => $e->getMessage(),
+                'payload' => $request->all(),
             ]);
 
-            return $this->responder->success('Failed payment');
-        } catch (\Exception $e) {
-            Log::error('Error processing STK callback', [
-                'error' => $e->getMessage()
-            ]);
+            // Use failed() only when your server could not handle the request at all,
+            // for example a broken payload or a failed security check.
+            // For other errors like the database being temporarily down, return success()
+            // and use your saved raw log to replay the callback once the issue is resolved.
             return $this->responder->failed('Internal server error');
         }
+
+        // Respond to Safaricom. All further processing runs in the background.
+        return $this->responder->success();
     }
 
-    // Implement other callback handlers similarly...
+    // Add handleB2cResult, handleReversalResult, etc. following the same pattern.
 }
 ```
 
+### Available `TransactionResult` Methods
 
-### Available Callback Methods
-
-Each callback type provides specific methods to access the payment data:
-
-#### Common Methods Available in All Callbacks
 ```php
-$result->getData(): object // Get the raw callback data.
-$result->isSuccessful(): bool
-$result->getResultCode(): int
+$result->isSuccessful(): bool           // true when ResultCode === 0
+$result->getResultCode(): int           // raw M-Pesa ResultCode
 $result->getResultDescription(): string
+$result->getData(): object              // full payload as stdClass
 ```
 
-The `CallbackResponder` provides two methods:
+### Callback Response Format
 
-- `success(string $message = 'Payment processed'): Responsable` - Returns a success response with ResultCode 0
-- `failed(string $message = 'Internal server error', int $statusCode = 500): Responsable` - Returns a failure response with ResultCode 1
+`CallbackResponder` returns JSON consumed by M-Pesa. The HTTP status code alone is not sufficient — M-Pesa reads `ResultCode` in the body.
 
-Response Format:
-All responses are returned as JSON with the appropriate Content-Type header.
+| Method | `ResultCode` | HTTP Status |
+|---|---|---|
+| `$responder->success($message)` | `0` | 200 |
+| `$responder->failed($message, $statusCode)` | `1` | `$statusCode` |
 
-Success Response:
 ```json
-{
-    "ResultCode": 0,
-    "ResultDesc": "Payment processed"
-}
-```
-
-Failed Response:
-```json
-{
-    "ResultCode": 1,
-    "ResultDesc": "Internal server error"
-}
+{ "ResultCode": 0, "ResultDesc": "Accepted" }
 ```
 
 ## For Contributors
