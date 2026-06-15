@@ -19,7 +19,9 @@ class MpesaTransactionResult implements TransactionResult
      */
     public function getData(): object
     {
-        return json_decode(json_encode($this->data)); // @phpstan-ignore-line
+        $decoded = json_decode(json_encode($this->data));
+
+        return is_object($decoded) ? $decoded : (object) $decoded;
     }
 
     /**

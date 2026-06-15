@@ -51,7 +51,7 @@ More can be added as per the config file below.
 
 The published config file (`config/mpesa.php`) contains the following options:
 
-For the cerfiticate, [Download](https://developer.safaricom.co.ke/Documentation) under M-Pesa API Certificates.
+For the certificate, [download it](https://developer.safaricom.co.ke/apis/GettingStarted) under M-Pesa API Certificates.
 
 ```php
 return [
@@ -361,6 +361,38 @@ Track each payment through clear, explicit states. Always set a status rather th
 - **Write a log entry the moment the request arrives.** If a background job fails silently, the log confirms the callback was received and gives you enough context to replay it.
 - **Use `$responder->success()` even when a payment fails.** A wrong PIN or cancelled payment is not your server failing. It is Safaricom reporting the outcome. Use `$responder->failed()` only when your server itself could not handle the request, for example a broken payload or a failed security check.
 - **Callback handling must be idempotent.** Safaricom can send the same callback more than once. Before doing any work, check the `CheckoutRequestID` or `ConversationID` against your records and skip if it was already handled.
+
+### Verify the Callback Source (IP Whitelisting)
+
+Your callback routes are public endpoints, anyone who finds the URL can send a fake request to it. Safaricom only sends callbacks from a small, fixed set of IP addresses, so checking the request's origin IP against that list is a cheap and reliable first line of defense.
+
+Safaricom publishes this IP list in the [Getting Started guide](https://developer.safaricom.co.ke/apis/GettingStarted). Store it in your own config (e.g. `config/mpesa.php` or an env-driven array) rather than hardcoding it, so it is easy to update if Safaricom ever adds an IP.
+
+A simple middleware applied to your callback routes:
+
+```php
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class VerifyMpesaIp
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        if (! $request->ip() || ! in_array($request->ip(), config('mpesa.allowed_callback_ips', []), true)) {
+            // Not from Safaricom. Treat this as a failed security check,
+            // not a business outcome, so return failed() rather than success().
+            return app(\Botnetdobbs\Mpesa\Contracts\CallbackResponder::class)->failed('Forbidden');
+        }
+
+        return $next($request);
+    }
+}
+```
+
+Apply it only to your callback routes, the ones Safaricom calls into your app. It is not needed on the SDK's outbound calls (`stkPush`, `b2c`, etc.) since those are your app calling Safaricom and are already secured via the OAuth token.
 
 ### Route Setup
 

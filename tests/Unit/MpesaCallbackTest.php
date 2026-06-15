@@ -232,6 +232,20 @@ class MpesaCallbackTest extends TestCase
         $this->assertEquals($expectedDesc, $result->getResultDescription());
     }
 
+    public function testEmptyCallbackPayloadDoesNotThrow(): void
+    {
+        $request = new Request();
+
+        $result = $this->mpesaCallback->handle($request);
+
+        $this->assertInstanceOf(TransactionResult::class, $result);
+        $this->assertFalse($result->isSuccessful());
+        $this->assertEquals(1, $result->getResultCode());
+        $this->assertEquals('', $result->getResultDescription());
+        $this->assertInstanceOf(\stdClass::class, $result->getData());
+        $this->assertEquals([], (array) $result->getData());
+    }
+
     public static function failedCallbackProvider(): array
     {
         return [
