@@ -32,7 +32,7 @@ class InitiatorCredentialGeneratorTest extends TestCase
             "digest_alg" => "sha256",
             "private_key_bits" => 2048,
             "private_key_type" => OPENSSL_KEYTYPE_RSA,
-            "config" => "/etc/ssl/openssl.cnf",   
+            "config" => "/etc/ssl/openssl.cnf",
         ];
 
         $key = openssl_pkey_new($config);
@@ -43,13 +43,24 @@ class InitiatorCredentialGeneratorTest extends TestCase
 
         config([
             'mpesa.certificate_path' => $this->certificatePath,
-            'mpesa.initiator.password' => 'test'
+            'mpesa.initiator.password' => 'test',
+            'mpesa.environment' => 'sandbox',
         ]);
 
         $generator = new InitiatorCredentialGenerator(app('cache'));
         $credential = $generator->generate();
 
         $this->assertNotEmpty($credential);
+
+        $password = 'test';
+        $rawKey = 'mpesa_initiator_credential_sandbox_' . $password;
+        $hashedKey = 'mpesa_initiator_credential_sandbox_' . hash('sha256', $password);
+
+        $this->assertFalse(
+            app('cache')->has($rawKey),
+            'Cache key must not include the raw initiator password'
+        );
+        $this->assertTrue(app('cache')->has($hashedKey));
     }
 
     public function testThrowsExceptionForMissingCertificate(): void

@@ -14,7 +14,8 @@ class RequiredFields
             'BusinessShortCode',
             'Amount',
             'PhoneNumber',
-            'CallBackURL'
+            'CallBackURL',
+            'AccountReference',
         ],
         MpesaRequestType::STK_QUERY->value => [
             'BusinessShortCode',
@@ -23,10 +24,12 @@ class RequiredFields
         MpesaRequestType::B2C->value => [
             'OriginatorConversationID',
             'InitiatorName',
+            'CommandID',
             'Amount',
             'PartyA',
             'PartyB',
-            'ResultURL'
+            'ResultURL',
+            'QueueTimeOutURL',
         ],
         MpesaRequestType::B2B->value => [
             'primaryShortCode',
@@ -52,21 +55,27 @@ class RequiredFields
             'Initiator',
             'PartyA',
             'IdentifierType',
-            'ResultURL'
+            'ResultURL',
+            'QueueTimeOutURL',
         ],
         MpesaRequestType::TRANSACTION_STATUS->value => [
             'Initiator',
             'TransactionID',
             'PartyA',
             'IdentifierType',
-            'ResultURL'
+            'ResultURL',
+            'QueueTimeOutURL',
         ],
         MpesaRequestType::REVERSAL->value => [
             'Initiator',
+            'CommandID',
             'TransactionID',
             'Amount',
             'ReceiverParty',
-            'ResultURL'
+            'RecieverIdentifierType',
+            'Remarks',
+            'ResultURL',
+            'QueueTimeOutURL',
         ],
     ];
 

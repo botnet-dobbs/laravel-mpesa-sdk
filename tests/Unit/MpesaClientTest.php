@@ -8,6 +8,7 @@ use Botnetdobbs\Mpesa\Http\MpesaAuthToken;
 use Botnetdobbs\Mpesa\Http\MpesaClient;
 use Botnetdobbs\Mpesa\Services\InitiatorCredentialGenerator;
 use Botnetdobbs\Mpesa\Tests\TestCase;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
@@ -22,6 +23,7 @@ class MpesaClientTest extends TestCase
             'Amount' => 1,
             'PhoneNumber' => '254722188188',
             'CallBackURL' => 'https://example.com/callback',
+            'AccountReference' => 'test_ref',
         ],
         'stkQuery' => [
             'BusinessShortCode' => '174379',
@@ -30,7 +32,6 @@ class MpesaClientTest extends TestCase
         'b2c' => [
             'OriginatorConversationID' => 'test_conversation_id',
             'InitiatorName' => 'test_initiator',
-            'SecurityCredential' => 'test_credential',
             'CommandID' => 'BusinessPayment',
             'Amount' => 1,
             'PartyA' => '174379',
@@ -64,7 +65,6 @@ class MpesaClientTest extends TestCase
         ],
         'accountBalance' => [
             'Initiator' => 'test_initiator',
-            'SecurityCredential' => 'test_credential',
             'CommandID' => 'AccountBalance',
             'PartyA' => '174379',
             'IdentifierType' => 4,
@@ -74,7 +74,6 @@ class MpesaClientTest extends TestCase
         ],
         'transactionStatus' => [
             'Initiator' => 'test_initiator',
-            'SecurityCredential' => 'test_credential',
             'CommandID' => 'TransactionStatusQuery',
             'TransactionID' => 'test_transaction_id',
             'PartyA' => '174379',
@@ -85,12 +84,11 @@ class MpesaClientTest extends TestCase
         ],
         'reversal' => [
             'Initiator' => 'test_initiator',
-            'SecurityCredential' => 'test_credential',
             'CommandID' => 'TransactionReversal',
             'TransactionID' => 'test_transaction_id',
             'Amount' => 1,
             'ReceiverParty' => '174379',
-            'ReceiverIdentifierType' => 4,
+            'RecieverIdentifierType' => '11',
             'ResultURL' => 'https://example.com/result',
             'QueueTimeOutURL' => 'https://example.com/timeout',
             'Remarks' => 'test_remark',
@@ -108,6 +106,12 @@ class MpesaClientTest extends TestCase
         $this->app->instance(InitiatorCredentialGenerator::class, $mockGenerator);
 
         $this->mpesaClient = $this->app->make(Client::class);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     public static function successfulApiCallsProvider(): array
@@ -146,7 +150,7 @@ class MpesaClientTest extends TestCase
             ],
             'B2B Payment' => [
                 'method' => 'b2b',
-                'endpoint' => '/mpesa/b2b/v1/paymentrequest',
+                'endpoint' => '/v1/ussdpush/get-msisdn',
                 'requestData' => self::$defaultRequestData['b2b'],
                 'responseData' => [
                     'ResponseCode' => '0',
@@ -211,6 +215,10 @@ class MpesaClientTest extends TestCase
         $this->mockSuccessfulTokenGeneration();
 
         Http::fake([
+            '*/oauth/v1/generate*' => Http::response([
+                'access_token' => 'test_token',
+                'expires_in' => '3599'
+            ], 200),
             "*$endpoint*" => Http::response($responseData, 200)
         ]);
 
@@ -222,24 +230,143 @@ class MpesaClientTest extends TestCase
         });
 
         $this->assertTrue($response->isSuccessful());
-        $this->assertEquals('0', $response->getResponseCode());
+        $this->assertEquals(0, $response->getResponseCode());
         $this->assertEquals($responseData['ResponseDescription'], $response->getResponseDescription());
-        $this->assertNotEmpty($data);
+        $this->assertNotEmpty((array) $data);
 
         if ($method === 'stkQuery') {
-            $this->assertEquals($responseData['ResultCode'], $response->getResultCode());
+            $this->assertEquals(0, $response->getResultCode());
             $this->assertEquals($responseData['ResultDesc'], $response->getResultDescription());
-        }
-
-        foreach ($data as $key => $value) {
-            $this->assertEquals($value, $data->$key);
         }
     }
 
-    public function testItThrowsExceptionWhenRequiredArgumentsAreMissing()
+    public function testStkPushSendsConsistentPasswordAndTimestamp(): void
     {
-        $this->mockSuccessfulTokenGeneration();
+        Carbon::setTestNow('2024-06-15 10:20:30');
 
+        Http::fake([
+            '*/oauth/v1/generate*' => Http::response([
+                'access_token' => 'test_token',
+                'expires_in' => '3599'
+            ], 200),
+            '*/mpesa/stkpush/v1/processrequest*' => Http::response([
+                'ResponseCode' => '0',
+                'ResponseDescription' => 'Success',
+            ], 200),
+        ]);
+
+        $this->mpesaClient->stkPush(self::$defaultRequestData['stkPush']);
+
+        $timestamp = '20240615102030';
+        $expectedPassword = base64_encode(
+            '174379' . config('mpesa.lipa_na_mpesa_passkey') . $timestamp
+        );
+
+        Http::assertSent(function ($request) use ($timestamp, $expectedPassword) {
+            if (!str_contains($request->url(), 'stkpush')) {
+                return false;
+            }
+
+            $data = $request->data();
+
+            return $data['Timestamp'] === $timestamp
+                && $data['Password'] === $expectedPassword
+                && $data['PartyA'] === '254722188188'
+                && $data['PartyB'] === '174379'
+                && $data['PhoneNumber'] === '254722188188'
+                && $data['TransactionType'] === 'CustomerPayBillOnline'
+                && !array_key_exists('Password', self::$defaultRequestData['stkPush']);
+        });
+    }
+
+    public function testStkPushIgnoresCallerSuppliedPasswordAndTimestamp(): void
+    {
+        Carbon::setTestNow('2024-06-15 10:20:30');
+
+        Http::fake([
+            '*/oauth/v1/generate*' => Http::response([
+                'access_token' => 'test_token',
+                'expires_in' => '3599'
+            ], 200),
+            '*/mpesa/stkpush/v1/processrequest*' => Http::response([
+                'ResponseCode' => '0',
+                'ResponseDescription' => 'Success',
+            ], 200),
+        ]);
+
+        $payload = array_merge(self::$defaultRequestData['stkPush'], [
+            'Password' => 'attacker-password',
+            'Timestamp' => '19990101000000',
+        ]);
+
+        $this->mpesaClient->stkPush($payload);
+
+        Http::assertSent(function ($request) {
+            if (!str_contains($request->url(), 'stkpush')) {
+                return false;
+            }
+
+            $data = $request->data();
+
+            return $data['Timestamp'] === '20240615102030'
+                && $data['Password'] !== 'attacker-password';
+        });
+    }
+
+    public function testB2cInjectsSecurityCredentialLast(): void
+    {
+        Http::fake([
+            '*/oauth/v1/generate*' => Http::response([
+                'access_token' => 'test_token',
+                'expires_in' => '3599'
+            ], 200),
+            '*/mpesa/b2c/v3/paymentrequest*' => Http::response([
+                'ResponseCode' => '0',
+                'ResponseDescription' => 'Success',
+            ], 200),
+        ]);
+
+        $payload = array_merge(self::$defaultRequestData['b2c'], [
+            'SecurityCredential' => 'caller-supplied-credential',
+        ]);
+
+        $this->mpesaClient->b2c($payload);
+
+        Http::assertSent(function ($request) {
+            if (!str_contains($request->url(), 'b2c')) {
+                return false;
+            }
+
+            return $request->data()['SecurityCredential'] === 'test_security_credential';
+        });
+    }
+
+    public function testB2bDoesNotInjectSecurityCredential(): void
+    {
+        Http::fake([
+            '*/oauth/v1/generate*' => Http::response([
+                'access_token' => 'test_token',
+                'expires_in' => '3599'
+            ], 200),
+            '*/v1/ussdpush/get-msisdn*' => Http::response([
+                'code' => '0',
+                'status' => 'USSD Initiated Successfully',
+            ], 200),
+        ]);
+
+        $this->mpesaClient->b2b(self::$defaultRequestData['b2b']);
+
+        Http::assertSent(function ($request) {
+            if (!str_contains($request->url(), 'ussdpush')) {
+                return false;
+            }
+
+            return !array_key_exists('SecurityCredential', $request->data());
+        });
+    }
+
+    public function testItThrowsExceptionWhenRequiredArgumentsAreMissing(): void
+    {
         $this->expectException(InvalidArgumentException::class);
 
         $this->mpesaClient->stkPush([
@@ -248,33 +375,66 @@ class MpesaClientTest extends TestCase
         ]);
     }
 
+    public function testItThrowsExceptionWhenRequiredArgumentsAreBlank(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('PhoneNumber');
+
+        $this->mpesaClient->stkPush([
+            'BusinessShortCode' => '174379',
+            'Amount' => 1,
+            'PhoneNumber' => '',
+            'CallBackURL' => 'https://example.com/callback',
+            'AccountReference' => 'test_ref',
+        ]);
+    }
+
     public function testItCanHandleFailedSTKPushRequest(): void
     {
-        $this->mockSuccessfulTokenGeneration();
-
         Http::fake([
+            '*/oauth/v1/generate*' => Http::response([
+                'access_token' => 'test_token',
+                'expires_in' => '3599'
+            ], 200),
             '*/mpesa/stkpush/v1/processrequest*' => Http::response([
                 'ResponseCode' => '1',
                 'ResponseDescription' => 'Failed',
             ], 200)
         ]);
 
-        $response = $this->mpesaClient->stkPush([
-            'BusinessShortCode' => '174379',
-            'Amount' => 1,
-            'PhoneNumber' => '254722188188',
-            'CallBackURL' => 'https://example.com/callback',
-        ])
-        ->getData();
+        $response = $this->mpesaClient->stkPush(self::$defaultRequestData['stkPush']);
 
-        $this->assertEquals('1', $response->ResponseCode);
-        $this->assertEquals('Failed', $response->ResponseDescription);
+        $this->assertFalse($response->isSuccessful());
+        $this->assertEquals(1, $response->getResponseCode());
+        $this->assertEquals('Failed', $response->getResponseDescription());
+    }
+
+    public function testMalformedApiResponseDoesNotThrowTypeError(): void
+    {
+        Http::fake([
+            '*/oauth/v1/generate*' => Http::response([
+                'access_token' => 'test_token',
+                'expires_in' => '3599'
+            ], 200),
+            '*/mpesa/stkpush/v1/processrequest*' => Http::response([
+                'error' => 'bad',
+            ], 200)
+        ]);
+
+        $response = $this->mpesaClient->stkPush(self::$defaultRequestData['stkPush']);
+
+        $this->assertFalse($response->isSuccessful());
+        $this->assertEquals(1, $response->getResponseCode());
+        $this->assertEquals('', $response->getResponseDescription());
+        $this->assertEquals(1, $response->getResultCode());
+        $this->assertEquals('', $response->getResultDescription());
+        $this->assertEquals('bad', $response->getData()->error);
     }
 
     public function testItUsesCachedTokenWhenActive(): void
     {
         $cachedToken = new MpesaAuthToken('active_test_token', 3600);
-        Cache::put('mpesa_access_token', $cachedToken);
+        Cache::put($this->accessTokenCacheKey(), $cachedToken);
 
         Http::fake([
             '*/mpesa/stkpush/v1/processrequest*' => Http::response([
@@ -283,12 +443,7 @@ class MpesaClientTest extends TestCase
             ], 200)
         ]);
 
-        $this->mpesaClient->stkPush([
-            'BusinessShortCode' => '174379',
-            'Amount' => 1,
-            'PhoneNumber' => '254722188188',
-            'CallBackURL' => 'https://example.com/callback',
-        ]);
+        $this->mpesaClient->stkPush(self::$defaultRequestData['stkPush']);
 
         Http::assertSent(function ($request) {
             return $request->hasHeader('Authorization', 'Bearer active_test_token');
@@ -298,65 +453,56 @@ class MpesaClientTest extends TestCase
     public function testItRefreshesCachedTokenOnExpiration(): void
     {
         $expiredToken = new MpesaAuthToken('test_token', -3600);
-        Cache::put('mpesa_access_token', $expiredToken);
+        Cache::put($this->accessTokenCacheKey(), $expiredToken);
 
         Http::fake([
             '*/oauth/v1/generate*' => Http::response([
                 'access_token' => 'new_test_token',
                 'expires_in' => '3599'
-            ], 200)
-        ]);
-
-        HTTP::fake([
+            ], 200),
             '*/mpesa/stkpush/v1/processrequest*' => Http::response([
                 'ResponseCode' => '0',
                 'ResponseDescription' => 'Success',
             ], 200)
         ]);
 
-        $this->mpesaClient->stkPush([
-            'BusinessShortCode' => '174379',
-            'Amount' => 1,
-            'PhoneNumber' => '254722188188',
-            'CallBackURL' => 'https://example.com/callback',
-        ]);
+        $this->mpesaClient->stkPush(self::$defaultRequestData['stkPush']);
 
-        $cachedToken = Cache::get('mpesa_access_token');
+        $cachedToken = Cache::get($this->accessTokenCacheKey());
+        $this->assertInstanceOf(MpesaAuthToken::class, $cachedToken);
         $this->assertEquals('new_test_token', $cachedToken->getToken());
     }
 
     public function testItHandlesTimeoutException(): void
     {
-        $this->mockSuccessfulTokenGeneration();
-
         Http::fake([
+            '*/oauth/v1/generate*' => Http::response([
+                'access_token' => 'test_token',
+                'expires_in' => '3599'
+            ], 200),
             '*/mpesa/stkpush/v1/processrequest*' => Http::response([], 408)
         ]);
 
-        $this->expectException(MpesaException::class);
-        $this->expectExceptionMessage('Mpesa API request failed: []');
-
-        $this->mpesaClient->stkPush([
-            'BusinessShortCode' => '174379',
-            'Amount' => 1,
-            'PhoneNumber' => '254722188188',
-            'CallBackURL' => 'https://example.com/callback',
-        ]);
+        try {
+            $this->mpesaClient->stkPush(self::$defaultRequestData['stkPush']);
+            $this->fail('Expected MpesaException was not thrown');
+        } catch (MpesaException $e) {
+            $this->assertStringContainsString('Mpesa API request failed', $e->getMessage());
+            $this->assertEquals(408, $e->status);
+        }
     }
 
     public function testItThrowsExceptionIfAccessTokenGenerationFails(): void
     {
         $this->mockFailedTokenGeneration();
 
-        $this->expectException(MpesaException::class);
-        $this->expectExceptionMessage('Failed to get access token: {"errorMessage":"Invalid credentials"}');
-
-        $this->mpesaClient->stkPush([
-            'BusinessShortCode' => '174379',
-            'Amount' => 1,
-            'PhoneNumber' => '254722188188',
-            'CallBackURL' => 'https://example.com/callback',
-        ]);
+        try {
+            $this->mpesaClient->stkPush(self::$defaultRequestData['stkPush']);
+            $this->fail('Expected MpesaException was not thrown');
+        } catch (MpesaException $e) {
+            $this->assertStringContainsString('Failed to get access token', $e->getMessage());
+            $this->assertEquals(401, $e->status);
+        }
     }
 
     public function testThrowsExceptionForEmptyConsumerKey(): void

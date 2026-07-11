@@ -44,7 +44,7 @@ class MpesaClient implements Client
             throw new \InvalidArgumentException('Mpesa environment not configured');
         }
 
-        if (!in_array($this->environment, ['sandbox', 'live'])) {
+        if (!in_array($this->environment, ['sandbox', 'live'], true)) {
             throw new \InvalidArgumentException('Invalid Mpesa environment. Must be either sandbox or live');
         }
     }
@@ -68,16 +68,29 @@ class MpesaClient implements Client
     }
 
     /**
+     * Cache key scoped by environment and consumer key.
+     *
+     * @return string
+     */
+    private function accessTokenCacheKey(): string
+    {
+        return sprintf(
+            'mpesa_access_token_%s_%s',
+            $this->environment,
+            hash('sha256', $this->consumerKey)
+        );
+    }
+
+    /**
      * @throws MpesaException
      *
      * @return string
      */
     private function getAccessToken(): string
     {
-        /** @var MpesaAuthToken $currentToken */
-        $currentToken = $this->cacheManager->getStore()->get('mpesa_access_token');
+        $currentToken = $this->cacheManager->get($this->accessTokenCacheKey());
 
-        if (filled($currentToken) && $currentToken->isActive()) {
+        if ($currentToken instanceof MpesaAuthToken && $currentToken->isActive()) {
             return $currentToken->getToken();
         }
 
@@ -90,7 +103,11 @@ class MpesaClient implements Client
         ]);
 
         if (!$response->successful()) {
-            throw new MpesaException('Failed to get access token: ' . $response->body());
+            throw new MpesaException(
+                'Failed to get access token: ' . $response->body(),
+                $response->status(),
+                $response->json() ?? $response->body()
+            );
         }
 
         $accessToken = new MpesaAuthToken(
@@ -110,7 +127,7 @@ class MpesaClient implements Client
      */
     private function setAccessToken(MpesaAuthToken $token): bool
     {
-        return $this->cacheManager->put('mpesa_access_token', $token);
+        return $this->cacheManager->put($this->accessTokenCacheKey(), $token);
     }
 
     /**
@@ -123,8 +140,25 @@ class MpesaClient implements Client
             ->connectTimeout((int) config('mpesa.defaults.connect_timeout'))
             ->baseUrl($this->getBaseUrl())
             ->throw(function (HttpResponse $response) {
-                throw new MpesaException('Mpesa API request failed: ' . $response->body());
+                throw new MpesaException(
+                    'Mpesa API request failed: ' . $response->body(),
+                    $response->status(),
+                    $response->json() ?? $response->body()
+                );
             });
+    }
+
+    /**
+     * Adds SecurityCredential last so values from the caller cannot override it.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function withSecurityCredential(array $data): array
+    {
+        $data['SecurityCredential'] = $this->credentialGenerator->generate();
+
+        return $data;
     }
 
     /**
@@ -132,12 +166,13 @@ class MpesaClient implements Client
      *
      * @param array{
      *     BusinessShortCode: numeric-string,
-     *     TransactionType: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",
+     *     TransactionType?: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",
      *     Amount: positive-int,
      *     PhoneNumber: numeric-string,
      *     CallBackURL: string,
      *     AccountReference: string,
-     *     TransactionDesc: string
+     *     TransactionDesc?: string,
+     *     PartyB?: numeric-string
      * } $data
      *
      * @throws MpesaException
@@ -148,15 +183,25 @@ class MpesaClient implements Client
     {
         $this->validateRequestType(MpesaRequestType::STK_PUSH, $data);
 
+        $timestamp = now()->format('YmdHis');
+        $password = $this->generatePassword((string) $data['BusinessShortCode'], $timestamp);
+
+        $payload = [
+            'BusinessShortCode' => $data['BusinessShortCode'],
+            'Password' => $password,
+            'Timestamp' => $timestamp,
+            'TransactionType' => $data['TransactionType'] ?? 'CustomerPayBillOnline',
+            'Amount' => $data['Amount'],
+            'PartyA' => $data['PhoneNumber'],
+            'PartyB' => $data['PartyB'] ?? $data['BusinessShortCode'],
+            'PhoneNumber' => $data['PhoneNumber'],
+            'CallBackURL' => $data['CallBackURL'],
+            'AccountReference' => $data['AccountReference'],
+            'TransactionDesc' => $data['TransactionDesc'] ?? 'Payment',
+        ];
+
         return new MpesaResponse(
-            $this->client()->post($this->getEndpoint('stk_push'), array_merge([
-                'BusinessShortCode' => $data['BusinessShortCode'],
-                'Password' => $this->generatePassword($data['BusinessShortCode']),
-                'Timestamp' => now()->format('YmdHis'),
-                'TransactionType' => 'CustomerPayBillOnline',
-                'PartyA' => $data['PhoneNumber'],
-                'PartyB' => $data['BusinessShortCode'],
-            ], $data))
+            $this->client()->post($this->getEndpoint('stk_push'), $payload)
         );
     }
 
@@ -176,11 +221,18 @@ class MpesaClient implements Client
     {
         $this->validateRequestType(MpesaRequestType::STK_QUERY, $data);
 
+        $timestamp = now()->format('YmdHis');
+        $password = $this->generatePassword((string) $data['BusinessShortCode'], $timestamp);
+
+        $payload = [
+            'BusinessShortCode' => $data['BusinessShortCode'],
+            'Password' => $password,
+            'Timestamp' => $timestamp,
+            'CheckoutRequestID' => $data['CheckoutRequestID'],
+        ];
+
         return new MpesaResponse(
-            $this->client()->post($this->getEndpoint('stk_query'), array_merge([
-                'Password' => $this->generatePassword($data['BusinessShortCode']),
-                'Timestamp' => now()->format('YmdHis'),
-            ], $data))
+            $this->client()->post($this->getEndpoint('stk_query'), $payload)
         );
     }
 
@@ -208,15 +260,19 @@ class MpesaClient implements Client
     {
         $this->validateRequestType(MpesaRequestType::B2C, $data);
 
-        $data['SecurityCredential'] = $this->credentialGenerator->generate();
-
         return new MpesaResponse(
-            $this->client()->post($this->getEndpoint('b2c_payment'), $data)
+            $this->client()->post(
+                $this->getEndpoint('b2c_payment'),
+                $this->withSecurityCredential($data)
+            )
         );
     }
 
     /**
-     * Initiates a Business to Business (B2B) payment
+     * Initiates a Business to Business (B2B) Express Checkout payment.
+     *
+     * Express Checkout uses camelCase field names and does not use
+     * SecurityCredential, so this method does not add it.
      *
      * @param array{
      *     primaryShortCode: numeric-string,
@@ -235,8 +291,6 @@ class MpesaClient implements Client
     public function b2b(array $data): Response
     {
         $this->validateRequestType(MpesaRequestType::B2B, $data);
-
-        $data['SecurityCredential'] = $this->credentialGenerator->generate();
 
         return new MpesaResponse(
             $this->client()->post($this->getEndpoint('b2b_payment'), $data)
@@ -311,10 +365,11 @@ class MpesaClient implements Client
     {
         $this->validateRequestType(MpesaRequestType::ACCOUNT_BALANCE, $data);
 
-        $data['SecurityCredential'] = $this->credentialGenerator->generate();
-
         return new MpesaResponse(
-            $this->client()->post($this->getEndpoint('account_balance'), $data)
+            $this->client()->post(
+                $this->getEndpoint('account_balance'),
+                $this->withSecurityCredential($data)
+            )
         );
     }
 
@@ -341,15 +396,19 @@ class MpesaClient implements Client
     {
         $this->validateRequestType(MpesaRequestType::TRANSACTION_STATUS, $data);
 
-        $data['SecurityCredential'] = $this->credentialGenerator->generate();
-
         return new MpesaResponse(
-            $this->client()->post($this->getEndpoint('transaction_status'), $data)
+            $this->client()->post(
+                $this->getEndpoint('transaction_status'),
+                $this->withSecurityCredential($data)
+            )
         );
     }
 
     /**
-     * Reverse a completed M-Pesa transaction
+     * Reverse a completed M-Pesa transaction.
+     *
+     * The field name `RecieverIdentifierType` is Safaricom's own spelling.
+     * Daraja only accepts this exact name, not the correct English spelling.
      *
      * @param array{
      *     Initiator: string,
@@ -357,11 +416,11 @@ class MpesaClient implements Client
      *     TransactionID: string,
      *     Amount: positive-int,
      *     ReceiverParty: numeric-string,
-     *     ReceiverIdentifierType: "1"|"2"|"4",
+     *     RecieverIdentifierType: "11",
      *     ResultURL: string,
      *     QueueTimeOutURL: string,
      *     Remarks: string,
-     *     Occasion: string
+     *     Occasion?: string
      * } $data Reversal parameters
      *
      * @throws MpesaException
@@ -372,22 +431,24 @@ class MpesaClient implements Client
     {
         $this->validateRequestType(MpesaRequestType::REVERSAL, $data);
 
-        $data['SecurityCredential'] = $this->credentialGenerator->generate();
-
         return new MpesaResponse(
-            $this->client()->post($this->getEndpoint('reversal'), $data)
+            $this->client()->post(
+                $this->getEndpoint('reversal'),
+                $this->withSecurityCredential($data)
+            )
         );
     }
 
     /**
      * @param string $shortcode
+     * @param string $timestamp Same timestamp that will be sent as Timestamp
      *
      * @return string
      */
-    private function generatePassword(string $shortcode): string
+    private function generatePassword(string $shortcode, string $timestamp): string
     {
-        $passkey = config('mpesa.lipa_na_mpesa_passkey');
-        $timestamp = now()->format('YmdHis');
+        $passkey = (string) config('mpesa.lipa_na_mpesa_passkey');
+
         return base64_encode($shortcode . $passkey . $timestamp);
     }
 }

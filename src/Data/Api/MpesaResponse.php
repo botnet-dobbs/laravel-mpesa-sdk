@@ -7,6 +7,8 @@ use Illuminate\Http\Client\Response;
 
 class MpesaResponse implements ResponseContract
 {
+    private ?object $decoded = null;
+
     /**
      * Constructor
      * @param Response $response
@@ -19,11 +21,18 @@ class MpesaResponse implements ResponseContract
     /**
      * Get complete response data
      * @return object
-     *
      */
     public function getData(): object
     {
-        return $this->response->object(); // @phpstan-ignore-line
+        if ($this->decoded !== null) {
+            return $this->decoded;
+        }
+
+        $data = $this->response->object();
+
+        $this->decoded = is_object($data) ? $data : (object) [];
+
+        return $this->decoded;
     }
 
     /**
@@ -33,7 +42,7 @@ class MpesaResponse implements ResponseContract
      */
     public function isSuccessful(): bool
     {
-        return (int) $this->getResponseCode() === 0;
+        return $this->getResponseCode() === 0;
     }
 
     /**
@@ -43,7 +52,13 @@ class MpesaResponse implements ResponseContract
      */
     public function getResponseCode(): int
     {
-        return $this->getData()->ResponseCode; // @phpstan-ignore-line
+        $data = $this->getData();
+
+        if (!property_exists($data, 'ResponseCode') || $data->ResponseCode === null || $data->ResponseCode === '') {
+            return 1;
+        }
+
+        return (int) $data->ResponseCode;
     }
 
     /**
@@ -53,7 +68,13 @@ class MpesaResponse implements ResponseContract
      */
     public function getResponseDescription(): string
     {
-        return $this->getData()->ResponseDescription; // @phpstan-ignore-line
+        $data = $this->getData();
+
+        if (!property_exists($data, 'ResponseDescription') || $data->ResponseDescription === null) {
+            return '';
+        }
+
+        return (string) $data->ResponseDescription;
     }
 
     /**
@@ -63,7 +84,13 @@ class MpesaResponse implements ResponseContract
      */
     public function getResultCode(): int
     {
-        return $this->getData()->ResultCode; // @phpstan-ignore-line
+        $data = $this->getData();
+
+        if (!property_exists($data, 'ResultCode') || $data->ResultCode === null || $data->ResultCode === '') {
+            return 1;
+        }
+
+        return (int) $data->ResultCode;
     }
 
     /**
@@ -73,6 +100,12 @@ class MpesaResponse implements ResponseContract
      */
     public function getResultDescription(): string
     {
-        return $this->getData()->ResultDesc; // @phpstan-ignore-line
+        $data = $this->getData();
+
+        if (!property_exists($data, 'ResultDesc') || $data->ResultDesc === null) {
+            return '';
+        }
+
+        return (string) $data->ResultDesc;
     }
 }
