@@ -21,14 +21,17 @@ trait RequestValidator
     /**
      * @param array<string, mixed> $data Input parameters
      * @param array<string> $required Required parameter keys
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     private function validateRequest(array $data, array $required): void
     {
-        $missing = array_filter($required, fn($param) => !isset($data[$param]));
+        $missing = array_filter(
+            $required,
+            fn (string $param) => !array_key_exists($param, $data) || blank($data[$param])
+        );
 
         if (!empty($missing)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "Missing required parameters: " .
                 collect($missing)->join(', ', ' and ')
             );

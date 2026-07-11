@@ -23,9 +23,6 @@ class MpesaServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__ . '/config/mpesa.php' => config_path('mpesa.php'),
         ], 'mpesa-config');
-
-        $endpointsConfig = require __DIR__ . '/config/mpesa-endpoints.php';
-        config()->set('mpesa.endpoints', $endpointsConfig);
     }
 
     /**
@@ -38,6 +35,15 @@ class MpesaServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             __DIR__ . '/config/mpesa.php',
             'mpesa'
+        );
+
+        // Load package endpoint defaults, then let existing app config override them.
+        config()->set(
+            'mpesa.endpoints',
+            array_replace_recursive(
+                require __DIR__ . '/config/mpesa-endpoints.php',
+                (array) config('mpesa.endpoints', [])
+            )
         );
 
         $this->app->singleton(InitiatorCredentialGenerator::class, function ($app) {

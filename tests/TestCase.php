@@ -32,19 +32,34 @@ class TestCase extends OrchestraTestCase
         $app['config']->set('mpesa.certificate_path', '');
         $app['config']->set('mpesa.environment', 'sandbox');
 
+        // Align with package endpoint defaults (sandbox).
         $app['config']->set('mpesa.endpoints.sandbox', [
             'base_url' => 'https://sandbox.safaricom.co.ke',
-            'oauth_token' => '/oauth/v1/generate',
+            'oauth_token' => '/oauth/v1/generate?grant_type=client_credentials',
             'stk_push' => '/mpesa/stkpush/v1/processrequest',
             'stk_query' => '/mpesa/stkpushquery/v1/query',
-            'b2c_payment' => '/mpesa/b2c/v1/paymentrequest',
-            'b2b_payment' => '/mpesa/b2b/v1/paymentrequest',
+            'b2c_payment' => '/mpesa/b2c/v3/paymentrequest',
+            'b2b_payment' => '/v1/ussdpush/get-msisdn',
             'c2b_register' => '/mpesa/c2b/v1/registerurl',
             'c2b_simulate' => '/mpesa/c2b/v1/simulate',
             'account_balance' => '/mpesa/accountbalance/v1/query',
             'transaction_status' => '/mpesa/transactionstatus/v1/query',
             'reversal' => '/mpesa/reversal/v1/request',
         ]);
+    }
+
+    /**
+     * Builds the same access token cache key that MpesaClient uses.
+     */
+    protected function accessTokenCacheKey(
+        string $environment = 'sandbox',
+        string $consumerKey = 'test_consumer_key'
+    ): string {
+        return sprintf(
+            'mpesa_access_token_%s_%s',
+            $environment,
+            hash('sha256', $consumerKey)
+        );
     }
 
     protected function mockSuccessfulTokenGeneration(): void

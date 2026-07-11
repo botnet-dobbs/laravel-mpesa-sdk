@@ -16,7 +16,10 @@ jobs:
             fail-fast: false
             matrix:
                 php: [8.4, 8.3, 8.2]
-                laravel: ["^13.0", "^12.0", "^11.0"]
+                # Laravel 11 stays supported in composer.json but is not tested
+                # here: its only resolvable releases are blocked by Composer's
+                # security-advisory policy, so the install step cannot pass.
+                laravel: ["^13.0", "^12.0"]
                 dependency-version: [prefer-lowest, prefer-stable]
                 exclude:
                     - php: 8.2
@@ -41,3 +44,28 @@ jobs:
 
             - name: Execute tests
               run: composer test
+
+    quality:
+        runs-on: ubuntu-latest
+        name: PHPStan & PHPCS
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: "8.3"
+                  extensions: curl, openssl, json, mbstring, fileinfo
+                  coverage: none
+
+            - name: Install dependencies
+              run: |
+                  composer require "laravel/framework:^12.0" --dev --no-interaction --no-update
+                  composer update --prefer-stable --prefer-dist --no-interaction
+
+            - name: Static analysis
+              run: composer analyse
+
+            - name: Code style
+              run: composer check-style

@@ -20,15 +20,19 @@ class InitiatorCredentialGenerator
 
     public function generate(): string
     {
-        $cacheKey = "mpesa_initiator_credential_{$this->environment}_{$this->initiatorPassword}";
+        $cacheKey = sprintf(
+            'mpesa_initiator_credential_%s_%s',
+            $this->environment,
+            hash('sha256', $this->initiatorPassword)
+        );
 
         return $this->cache->remember($cacheKey, now()->addHours(24), function () {
             if (!$this->initiatorPassword) {
-                throw new \InvalidArgumentException('Mpesa initiator password not configured.');
+                throw new InvalidArgumentException('Mpesa initiator password not configured.');
             }
 
             if (!$this->certificatePath || !file_exists($this->certificatePath)) {
-                throw new \InvalidArgumentException('Mpesa certificate not found.');
+                throw new InvalidArgumentException('Mpesa certificate not found.');
             }
 
             /** @var string $cert */
@@ -36,7 +40,7 @@ class InitiatorCredentialGenerator
             $pubKeyId = openssl_pkey_get_public($cert);
 
             if (!$pubKeyId) {
-                throw new \InvalidArgumentException('Invalid Mpesa certificate');
+                throw new InvalidArgumentException('Invalid Mpesa certificate');
             }
 
             openssl_public_encrypt($this->initiatorPassword, $encrypted, $pubKeyId, OPENSSL_PKCS1_PADDING);

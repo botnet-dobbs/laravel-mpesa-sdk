@@ -3,8 +3,6 @@
 namespace Botnetdobbs\Mpesa\Http\Callbacks;
 
 use Botnetdobbs\Mpesa\Contracts\CallbackResponder;
-use Botnetdobbs\Mpesa\Http\Callbacks\FailedResponse;
-use Botnetdobbs\Mpesa\Http\Callbacks\SuccessResponse;
 use Illuminate\Contracts\Support\Responsable;
 
 class CallbackResponse implements CallbackResponder

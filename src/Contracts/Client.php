@@ -12,12 +12,13 @@ interface Client
      *
      * @param array{
      *     BusinessShortCode: numeric-string,
-     *     TransactionType: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",
+     *     TransactionType?: "CustomerPayBillOnline"|"CustomerBuyGoodsOnline",
      *     Amount: positive-int,
      *     PhoneNumber: numeric-string,
      *     CallBackURL: string,
      *     AccountReference: string,
-     *     TransactionDesc: string
+     *     TransactionDesc?: string,
+     *     PartyB?: numeric-string
      * } $data
      *
      * @throws MpesaException
@@ -63,7 +64,9 @@ interface Client
     public function b2c(array $data): Response;
 
     /**
-     * Initiates a Business to Business (B2B) payment
+     * Initiates a Business to Business (B2B) Express Checkout payment.
+     *
+     * Express Checkout does not use SecurityCredential, so it is not added here.
      *
      * @param array{
      *     primaryShortCode: numeric-string,
@@ -155,7 +158,10 @@ interface Client
     public function transactionStatus(array $data): Response;
 
     /**
-     * Reverse a completed M-Pesa transaction
+     * Reverse a completed M-Pesa transaction.
+     *
+     * The field name `RecieverIdentifierType` is Safaricom's own spelling.
+     * Daraja only accepts this exact name, not the correct English spelling.
      *
      * @param array{
      *     Initiator: string,
@@ -163,11 +169,11 @@ interface Client
      *     TransactionID: string,
      *     Amount: positive-int,
      *     ReceiverParty: numeric-string,
-     *     ReceiverIdentifierType: "1"|"2"|"4",
+     *     RecieverIdentifierType: "11",
      *     ResultURL: string,
      *     QueueTimeOutURL: string,
      *     Remarks: string,
-     *     Occasion: string
+     *     Occasion?: string
      * } $data Reversal parameters
      *
      * @throws MpesaException

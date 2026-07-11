@@ -3,6 +3,7 @@
 return [
     "consumer_key" => env("MPESA_CONSUMER_KEY"),
     "consumer_secret" => env("MPESA_CONSUMER_SECRET"),
+    // Sandbox default only. Always set MPESA_LIPA_NA_MPESA_PASSKEY for live.
     "lipa_na_mpesa_passkey" => env(
         "MPESA_LIPA_NA_MPESA_PASSKEY",
         "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
@@ -37,4 +38,11 @@ return [
         "timeout" => 60,
         "connect_timeout" => 15,
     ],
+    // Safaricom publishes callback source IPs in their Getting Started guide.
+    // Use this list in your own middleware to restrict callback routes.
+    // The package does not enforce it.
+    "allowed_callback_ips" => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('MPESA_ALLOWED_CALLBACK_IPS', ''))
+    ))),
 ];

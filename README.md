@@ -2,10 +2,17 @@
 
 [![build](https://github.com/botnet-dobbs/laravel-mpesa-sdk/actions/workflows/main.yml/badge.svg)](https://github.com/botnet-dobbs/laravel-mpesa-sdk/actions/workflows/main.yml) ![Packagist Downloads](https://img.shields.io/packagist/dt/botnetdobbs/laravel-mpesa-sdk)
 
+A thin, dependency-injection friendly SDK for Safaricom's M-Pesa Daraja API.
+STK Push, B2C, B2B Express Checkout, C2B, account balance, transaction status,
+and reversals.
 
-Laravel package for integrating with Safaricom"s M-Pesa payment gateway. Supports STK Push, B2C, B2B, balance queries, transaction status checks, and payment reversals.
+No models, migrations, or routes are forced on you. The package handles the
+integration layer: OAuth tokens and caching, the STK password and timestamp,
+initiator credential encryption, request validation, and callback parsing.
+Your app owns the payment records, queues, and business logic.
 
-For the most current API documentation and updates, always refer to the [Safaricom Developer Portal](https://developer.safaricom.co.ke/APIs).
+For upstream API changes, always refer to the
+[Safaricom Developer Portal](https://developer.safaricom.co.ke/APIs).
 
 ## Requirements
 
@@ -13,534 +20,229 @@ For the most current API documentation and updates, always refer to the [Safaric
 
 | Laravel Version  |
 |------------------|
-| Laravel 10.x     |
 | Laravel 11.x     |
 | Laravel 12.x     |
 | Laravel 13.x     |
 
-## Installation
+---
 
-Install the package via Composer:
+## Installation
 
 ```bash
 composer require botnetdobbs/laravel-mpesa-sdk
 ```
 
-Publish the configuration file:
+Publish the config file:
 
 ```bash
 php artisan vendor:publish --tag=mpesa-config
 ```
 
-## Configuration
-
-Add the following variables to your `.env` file:
+Set your credentials in `.env`. Get them from the My Apps page on the Daraja portal:
 
 ```env
+MPESA_ENV=sandbox
 MPESA_CONSUMER_KEY=your_consumer_key
 MPESA_CONSUMER_SECRET=your_consumer_secret
-MPESA_LIPA_NA_MPESA_PASSKEY=your_lipa_na_mpesa_passkey
-MPESA_INITIATOR_NAME=your_initiator_name
-MPESA_INITIATOR_PASSWORD=your_initiator_password
-MPESA_CERTIFICATE_PATH=your_downloaded_mpesa_certificate_path
-MPESA_ENV=sandbox  # or "live" for production
-```
-More can be added as per the config file below.
-
-### Configuration Options
-
-The published config file (`config/mpesa.php`) contains the following options:
-
-For the certificate, [download it](https://developer.safaricom.co.ke/apis/GettingStarted) under M-Pesa API Certificates.
-
-```php
-return [
-    "consumer_key" => env("MPESA_CONSUMER_KEY"),
-    "consumer_secret" => env("MPESA_CONSUMER_SECRET"),
-    "lipa_na_mpesa_passkey" => env(
-        "MPESA_LIPA_NA_MPESA_PASSKEY",
-        "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
-    ),
-    "certificate_path" => env("MPESA_CERTIFICATE_PATH"),
-    "environment" => env("MPESA_ENV", "sandbox"),
-    "initiator" => [
-        'name' => env("MPESA_INITIATOR_NAME"),
-        'password' => env("MPESA_INITIATOR_PASSWORD"),
-    ],
-    "callbacks" => [
-        "base_url" => env("MPESA_CALLBACK_BASE_URL", "https://example.com"),
-        "paths" => [
-            "stk" => [
-                "result" => "/api/mpesa/callback/stk",
-            ],
-            "b2c" => [
-                "result" => "/api/mpesa/callback/b2c",
-                "timeout" => "/api/mpesa/callback/b2c/timeout",
-            ],
-            // Add more callback paths here
-        ]
-    ],
-    "business" => [
-        "short_codes" => [
-            "default" => env("MPESA_SHORT_CODE"),
-            "till" => env("MPESA_TILL_NUMBER"),
-            "paybill" => env("MPESA_PAYBILL_NUMBER"),
-        ],
-
-    ],
-    "defaults" => [
-        "timeout" => 60,
-        "connect_timeout" => 15,
-    ]
-];
 ```
 
-## Usage
+That is enough for STK Push in sandbox. B2C, balance, status, and reversal also
+need initiator credentials and a certificate. Details:
+
+- [Getting Started](docs/getting-started.md): first call, how authentication works
+- [Configuration](docs/configuration.md): every option and the go-live checklist
+
+---
+
+## Quick Look
+
+### Initiate a payment
+
+Inject the `Client` contract. There is no facade.
 
 ```php
 use Botnetdobbs\Mpesa\Contracts\Client;
 use Botnetdobbs\Mpesa\Exceptions\MpesaException;
-use Illuminate\Http\JsonResponse;
 
 class PaymentController extends Controller
 {
-    public function __construct(
-        private readonly Client $mpesaClient
-    ) {}
+    public function __construct(private Client $mpesa)
+    {
+    }
 
-    public function initiatePayment(): JsonResponse
+    public function checkout(Order $order)
     {
         try {
-            $response = $this->mpesaClient->stkPush([...]);
-
-            if ($response->isSuccessful()) {
-                $data = $response->getData();
-                // Persist CheckoutRequestID against your order/payment record.
-                // Your callback handler uses it to match the async notification back to this transaction and to guard against duplicate processing.
-                // e.g. $payment->update(['checkout_request_id' => $data->CheckoutRequestID]);
-
-                return response()->json(['message' => 'Payment initiated successfully.']);
-            }
-
-            // M-Pesa accepted the request but returned a business-level error.
-            return response()->json(['message' => $response->getResponseDescription()], 422);
+            $response = $this->mpesa->stkPush([
+                'BusinessShortCode' => config('mpesa.business.short_codes.paybill'),
+                'Amount' => $order->total,
+                'PhoneNumber' => $order->customer_phone,    // 2547XXXXXXXX
+                'CallBackURL' => route('mpesa.stk.callback'),
+                'AccountReference' => $order->reference,    // shown on the customer's prompt
+            ]);
         } catch (MpesaException $e) {
-            // Thrown on HTTP-level failures (4xx/5xx from the M-Pesa API).
-            logger()->error('mpesa.stk_push.error', ['error' => $e->getMessage()]);
+            logger()->error('mpesa.stk_push.error', ['error' => $e->getMessage(), 'status' => $e->status]);
 
-            return response()->json(['message' => 'Payment initiation failed. Please try again.'], 502);
-        } catch (\InvalidArgumentException $e) {
-            // Thrown when required fields are missing before the HTTP call is made.
-            logger()->error('mpesa.stk_push.validation', ['error' => $e->getMessage()]);
-
-            return response()->json(['message' => $e->getMessage()], 400);
-        }
-    }
-}
-
-```
-
-### STK Push (Lipa Na M-Pesa Online)
-
-```php
-
-$response = $this->mpesaClient->stkPush([
-    "BusinessShortCode" => "174379",    // Organization's shortcode  (Paybill or Buygoods - A 5 to 6-digit account number) used to identify an organization and receive the transaction.
-    "TransactionType" => "CustomerPayBillOnline",    // or CustomerBuyGoodsOnline
-    "Amount" => 1,
-    "PhoneNumber" => "254722000000", // The Mobile Number to receive the STK Pin Prompt.
-    "CallBackURL" => config('mpesa.callbacks.base_url', "https://example.com") . config('mpesa.callbacks.paths.stk_push.result', "/callback"),    // Valid secure URL that is used to receive notifications from M-Pesa API.
-    "AccountReference" => "Test",
-    "TransactionDesc" => "Test Payment"
-]);
-```
-
-### STK Push (check the status of a Lipa Na M-Pesa Online Payment.)
-
-```php
-
-$response = $this->mpesaClient->stkQuery([
-    "BusinessShortCode" => "174379",
-    "CheckoutRequestID" => "ws_CO_260520211133524545"
-]);
-```
-
-### B2C Payment (Business to Customer)
-
-```php
-
-$response = $this->mpesaClient->b2c([
-    "OriginatorConversationID" => "unique-id",
-    "InitiatorName" => "testapi",
-    "CommandID" => "BusinessPayment",  // Or "SalaryPayment", "PromotionPayment"
-    "Amount" => 100,
-    "PartyA" => "600000",      // Your business shortcode
-    "PartyB" => "254722000000", // Customer phone number
-    "Remarks" => "Test payment",
-    "QueueTimeOutURL" => "https://example.com/queue-timeout",   // The URL to be specified in your request that will be used by API Proxy to send notification incase the payment request is timed out while awaiting processing in the queue.
-    "ResultURL" => "https://example.com/result",    // The URL to be specified in your request that will be used by M-PESA to send notification upon processing of the payment request.
-    "Occasion" => "Test"
-]);
-```
-
-### B2B Payment (Business to Business)
-
-B2B parameter naming convention is camelCase instead of PascalCase like the other endpoints on the [Safaricom Developer Portal](https://developer.safaricom.co.ke/APIs/B2BExpressCheckout). Retained as is
-
-```php
-
-$response = $this->mpesaClient->b2b([
-    "primaryShortCode" => "000001",    // Sender business shortcode
-    "receiverShortCode" => "000002",   // Receiver business shortcode
-    "amount" => 100,
-    "paymentRef" => "INV001",          // Your reference
-    "callbackUrl" => "https://example.com/callback",
-    "partnerName" => "Vendor Name",
-    "RequestRefID" => "unique-id-123"   // Unique identifier for the request
-]);
-```
-
-### C2B Register (Customer to Business)
-```php
-
-$response = $this->mpesaClient->c2bRegister([
-    "ShortCode" => "600000",
-    "ResponseType" => "Completed",      // Or "Cancelled"
-    "ConfirmationURL" => "https://example.com/confirmation",    // The URL that receives the confirmation request from API upon payment completion.
-    "ValidationURL" => "https://example.com/validation",    // The URL that receives the validation request from the API upon payment submission. The validation URL is only called if the external validation on the registered shortcode is enabled. (By default External Validation is disabled).
-]);
-```
-
-### C2B Simulate Payment (Sandbox Environment Only)
-
-```php
-
-$response = $this->mpesaClient->c2bSimulate([
-    "ShortCode" => "600000",
-    "CommandID" => "CustomerPayBillOnline",  // Or "CustomerBuyGoodsOnline"
-    "Amount" => 100,
-    "Msisdn" => "254722000000",             // Customer phone number
-    "BillRefNumber" => "INV001"             // Optional reference
-]);
-```
-
-### Account Balance Query
-
-```php
-
-$response = $this->mpesaClient->accountBalance([
-    "Initiator" => "testapi",   // The credential/username used to authenticate the transaction request
-    "CommandID" => "AccountBalance",
-    "PartyA" => "600000",              // Your business shortcode
-    "IdentifierType" => "4",           // 4 for organization shortcode
-    "Remarks" => "Balance query",
-    "QueueTimeOutURL" => "https://example.com/timeout", // The end-point that receives a timeout message.
-    "ResultURL" => "https://example.com/result",    // It indicates the destination URL which Daraja should send the result message to.
-]);
-```
-
-### Transaction Status Query
-
-```php
-
-$response = $this->mpesaClient->transactionStatus([
-    "Initiator" => "testapi",
-    "CommandID" => "TransactionStatusQuery",
-    "TransactionID" => "OEI2AK4Q16",    // The M-Pesa transaction ID
-    "PartyA" => "600000",               // Your business shortcode
-    "IdentifierType" => "4",            // 4 for organization shortcode
-    "ResultURL" => "https://example.com/result",
-    "QueueTimeOutURL" => "https://example.com/timeout",
-    "Remarks" => "Status check",
-    "Occasion" => "Transaction query",  // Optional parameter
-]);
-```
-
-### Transaction Reversal
-
-```php
-
-$response = $this->mpesaClient->reversal([
-    "Initiator" => "testapi",
-    "CommandID" => "TransactionReversal",
-    "TransactionID" => "OEI2AK4Q16",     // The M-Pesa transaction ID to reverse
-    "Amount" => 100,                      // Amount to reverse
-    "ReceiverParty" => "600000",         // Organization receiving the reversal
-    "RecieverIdentifierType" => "4",      // 4 for organization shortcode
-    "ResultURL" => "https://example.com/result",
-    "QueueTimeOutURL" => "https://example.com/timeout",
-    "Remarks" => "Reversal request",
-    "Occasion" => "Transaction reversal"
-]);
-```
-
-### Response Handling
-All methods return a standard Response with the following methods:
-
-```php
-// Get the raw response data
-$data = $response->getData(): object
-
-// Check if the request was successful
-$isSuccessful = $response->isSuccessful(): bool
-
-// Get specific response fields
-$code = $response->getResponseCode(): int
-$description = $response->getResponseDescription(): string
-
-$resultCode = $response->getResultCode(): int // STK Query
-$resultDescription = $response->getResultDescription(): string // STK Query
-```
-
-### Example Usage
-```php
-$response = $this->mpesaClient->stkPush([...]);
-$data = $response->getData();
-
-// Access properties using object syntax
-$merchantRequestId = $data->MerchantRequestID;
-$checkoutRequestId = $data->CheckoutRequestID;
-```
-
-## Error Handling
-
-The package throws `MpesaException` for various error scenarios:
-
-```php
-use Botnetdobbs\Mpesa\Exceptions\MpesaException;
-try {
-    $response = $this->mpesaClient->stkPush([...]);
-    if ($response->isSuccessful()) {
-        $data = $response->getData();
-    }
-} catch (MpesaException $e) {
-    // Handle the error
-    logger()->error("M-Pesa error: " . $e->getMessage());
-}
-```
-
-## Callback Handling
-
-M-Pesa calls your `CallBackURL` / `ResultURL` asynchronously after processing a transaction.
-
-### Recommended Processing Pipeline
-
-```
-Safaricom Callback
-    ↓
-Log + persist raw request           ← do this before anything else
-    ↓
-Return HTTP 200 + ResultCode 0      ← release Safaricom immediately
-    ↓
-Dispatch queue job
-    ↓
-Idempotency check                   ← skip if already handled
-    ↓
-Apply business logic
-    ↓
-Mark processed / failed / reconciled
-```
-
-Your callback endpoint has one job: confirm receipt and hand off. All actual processing happens in the background.
-
-### Payment State Lifecycle
-
-Track each payment through clear, explicit states. Always set a status rather than guessing it from missing records.
-
-| State | Meaning |
-|---|---|
-| `received` | Callback saved to the database, not yet processed |
-| `queued` | Handed off to a background job |
-| `processed` | Payment confirmed and order fulfilled |
-| `failed` | M-Pesa reported a failure (wrong PIN, insufficient funds, cancelled) |
-| `reconciled` | Status confirmed later via `transactionStatus()` after a timeout or mismatch |
-
-### Production Rules
-
-- **Save the raw payload before doing anything else.** If something breaks after you respond to Safaricom, this saved copy is how you recover. Store `$request->getContent()` or `$request->all()` as-is.
-- **Write a log entry the moment the request arrives.** If a background job fails silently, the log confirms the callback was received and gives you enough context to replay it.
-- **Use `$responder->success()` even when a payment fails.** A wrong PIN or cancelled payment is not your server failing. It is Safaricom reporting the outcome. Use `$responder->failed()` only when your server itself could not handle the request, for example a broken payload or a failed security check.
-- **Callback handling must be idempotent.** Safaricom can send the same callback more than once. Before doing any work, check the `CheckoutRequestID` or `ConversationID` against your records and skip if it was already handled.
-
-### Verify the Callback Source (IP Whitelisting)
-
-Your callback routes are public endpoints, anyone who finds the URL can send a fake request to it. Safaricom only sends callbacks from a small, fixed set of IP addresses, so checking the request's origin IP against that list is a cheap and reliable first line of defense.
-
-Safaricom publishes this IP list in the [Getting Started guide](https://developer.safaricom.co.ke/apis/GettingStarted). Store it in your own config (e.g. `config/mpesa.php` or an env-driven array) rather than hardcoding it, so it is easy to update if Safaricom ever adds an IP.
-
-A simple middleware applied to your callback routes:
-
-```php
-namespace App\Http\Middleware;
-
-use Closure;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
-
-class VerifyMpesaIp
-{
-    public function handle(Request $request, Closure $next): Response
-    {
-        if (! $request->ip() || ! in_array($request->ip(), config('mpesa.allowed_callback_ips', []), true)) {
-            // Not from Safaricom. Treat this as a failed security check,
-            // not a business outcome, so return failed() rather than success().
-            return app(\Botnetdobbs\Mpesa\Contracts\CallbackResponder::class)->failed('Forbidden');
+            return response()->json(['message' => 'Payment could not be started. Please try again.'], 502);
         }
 
-        return $next($request);
+        if (! $response->isSuccessful()) {
+            // Daraja rejected the request. Log it, return a safe message.
+            logger()->warning('mpesa.stk_push.rejected', ['body' => (array) $response->getData()]);
+
+            return response()->json(['message' => 'Payment could not be started. Please try again.'], 422);
+        }
+
+        // Save this ID. It links the callback back to the order.
+        $order->update([
+            'checkout_request_id' => $response->getData()->CheckoutRequestID,
+            'status' => 'awaiting_payment',
+        ]);
+
+        return response()->json([
+            'message' => 'Check your phone and enter your M-PESA PIN.',
+            'checkout_request_id' => $order->checkout_request_id,
+        ], 202);
     }
 }
 ```
 
-Apply it only to your callback routes, the ones Safaricom calls into your app. It is not needed on the SDK's outbound calls (`stkPush`, `b2c`, etc.) since those are your app calling Safaricom and are already secured via the OAuth token.
+The package generates the Daraja `Password` and `Timestamp` fields for you and
+refreshes OAuth tokens behind the scenes.
 
-### Route Setup
+### Receive the result
 
-Register callback routes in `routes/api.php`. Routes defined here are already exempt from CSRF verification.
-
-```php
-use App\Http\Controllers\MpesaCallbackController;
-
-Route::prefix('mpesa/callback')->group(function () {
-    Route::post('stk', [MpesaCallbackController::class, 'handleStkCallback']);
-    Route::post('b2c/result', [MpesaCallbackController::class, 'handleB2cResult']);
-});
-```
-
-### MpesaCallbackController
+M-Pesa posts the payment outcome to your callback URL. Save first, respond
+fast, process in a job:
 
 ```php
-namespace App\Http\Controllers;
-
 use Botnetdobbs\Mpesa\Contracts\CallbackProcessor;
 use Botnetdobbs\Mpesa\Contracts\CallbackResponder;
-use Illuminate\Contracts\Support\Responsable;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class MpesaCallbackController extends Controller
 {
     public function __construct(
-        private readonly CallbackProcessor $processor,
-        private readonly CallbackResponder $responder
-    ) {}
-
-    public function handleStkCallback(Request $request): Responsable
-    {
-        // 1. Log and save the raw request body before doing anything else.
-        //    If something breaks after you respond, this is how you recover.
-        Log::info('mpesa.stk_callback.received', ['payload' => $request->all()]);
-        // e.g. MpesaRawCallback::create(['payload' => $request->getContent(), 'type' => 'stk']);
-
-        try {
-            $result = $this->processor->handle($request);
-
-            $data = $result->getData();
-            $checkoutRequestId = $data->Body->stkCallback->CheckoutRequestID ?? null;
-
-            // 2. Idempotency check: verify this CheckoutRequestID has not been processed before.
-            //    Safaricom can send the same callback more than once, so skip duplicates.
-            //    e.g. if (Payment::where('checkout_request_id', $checkoutRequestId)->exists()) { ... }
-
-            // 3. Hand off to a background job for all database writes and business logic.
-            //    Set the payment status to 'queued' now. The job will update it to
-            //    'processed', 'failed', or 'reconciled' when it runs.
-            //    e.g. ProcessStkCallback::dispatch($request->all());
-            //    e.g. $payment->update(['status' => 'queued']);
-
-            if ($result->isSuccessful()) {
-                // Safaricom confirmed the customer completed the payment.
-                // Let the background job handle fulfillment.
-                Log::info('mpesa.stk.completed', [
-                    'checkout_request_id' => $checkoutRequestId,
-                    'merchant_request_id' => $data->Body->stkCallback->MerchantRequestID ?? null,
-                ]);
-            } else {
-                // The payment did not go through. The customer may have cancelled,
-                // entered the wrong PIN, or had insufficient funds.
-                // Safaricom still delivered the notification successfully, so return
-                // success() below. Mark the payment as 'failed' inside your job.
-                Log::warning('mpesa.stk.business_failure', [
-                    'checkout_request_id' => $checkoutRequestId,
-                    'result_code'         => $result->getResultCode(),
-                    'result_description'  => $result->getResultDescription(),
-                ]);
-            }
-        } catch (\Throwable $e) {
-            Log::error('mpesa.stk_callback.error', [
-                'error'   => $e->getMessage(),
-                'payload' => $request->all(),
-            ]);
-
-            // Use failed() only when your server could not handle the request at all,
-            // for example a broken payload or a failed security check.
-            // For other errors like the database being temporarily down, return success()
-            // and use your saved raw log to replay the callback once the issue is resolved.
-            return $this->responder->failed('Internal server error');
-        }
-
-        // Respond to Safaricom. All further processing runs in the background.
-        return $this->responder->success();
+        private CallbackProcessor $processor,
+        private CallbackResponder $responder,
+    ) {
     }
 
-    // Add handleB2cResult, handleReversalResult, etc. following the same pattern.
+    public function stk(Request $request)
+    {
+        MpesaRawCallback::create(['payload' => $request->getContent()]); // save first
+
+        ProcessStkCallback::dispatch($request->all());                   // work in a job
+
+        return $this->responder->success();                              // release Safaricom
+    }
 }
 ```
 
-### Available `TransactionResult` Methods
+That is the whole loop. The guides below cover every field, payload, and
+production rule.
 
-```php
-$result->isSuccessful(): bool           // true when ResultCode === 0
-$result->getResultCode(): int           // raw M-Pesa ResultCode
-$result->getResultDescription(): string
-$result->getData(): object              // full payload as stdClass
-```
+---
 
-### Callback Response Format
+## Documentation
 
-`CallbackResponder` returns JSON consumed by M-Pesa. The HTTP status code alone is not sufficient — M-Pesa reads `ResultCode` in the body.
+- [Getting Started](docs/getting-started.md)
+- [Configuration](docs/configuration.md)
+- [STK Push (M-Pesa Express)](docs/stk-push.md)
+- [B2C Payments](docs/b2c.md)
+- [B2B Express Checkout](docs/b2b-express-checkout.md)
+- [C2B (Customer to Business)](docs/c2b.md)
+- [Account Balance](docs/account-balance.md)
+- [Transaction Status](docs/transaction-status.md)
+- [Transaction Reversal](docs/reversal.md)
+- [Callbacks](docs/callbacks.md)
+- [Responses and Errors](docs/responses-and-errors.md)
 
-| Method | `ResultCode` | HTTP Status |
-|---|---|---|
-| `$responder->success($message)` | `0` | 200 |
-| `$responder->failed($message, $statusCode)` | `1` | `$statusCode` |
+---
 
-```json
-{ "ResultCode": 0, "ResultDesc": "Accepted" }
-```
+## Client Method Reference
+
+All methods live on `Botnetdobbs\Mpesa\Contracts\Client` and return a response
+object. See [Responses and Errors](docs/responses-and-errors.md) for the
+response helpers.
+
+| Method | Daraja API | What it does |
+|--------|-----------|--------------|
+| `stkPush($data)` | M-Pesa Express | Sends a payment prompt to a customer's phone ([guide](docs/stk-push.md)) |
+| `stkQuery($data)` | M-Pesa Express Query | Checks the status of a prompt ([guide](docs/stk-push.md#query-a-payment-status)) |
+| `b2c($data)` | B2C | Pays a customer from your business account ([guide](docs/b2c.md)) |
+| `b2b($data)` | B2B Express Checkout | Prompts another merchant to pay you from their till ([guide](docs/b2b-express-checkout.md)) |
+| `c2bRegister($data)` | C2B | Registers your confirmation and validation URLs ([guide](docs/c2b.md)) |
+| `c2bSimulate($data)` | C2B | Simulates a customer payment, sandbox only ([guide](docs/c2b.md#simulate-a-payment-sandbox-only)) |
+| `accountBalance($data)` | Account Balance | Queries your shortcode account balances ([guide](docs/account-balance.md)) |
+| `transactionStatus($data)` | Transaction Status | Looks up the state of any transaction ([guide](docs/transaction-status.md)) |
+| `reversal($data)` | Reversal | Reverses a completed transaction ([guide](docs/reversal.md)) |
+
+For inbound callbacks, use `CallbackProcessor` and `CallbackResponder`. See
+[Callbacks](docs/callbacks.md).
+
+---
+
+## Common Questions
+
+**Is there a facade?**
+
+No. Inject `Botnetdobbs\Mpesa\Contracts\Client` through the container. This
+keeps your code testable and swappable.
+
+**My callback never arrived. Now what?**
+
+M-Pesa does not retry failed callbacks. Recover with `stkQuery()` for STK
+payments or `transactionStatus()` for everything else. See
+[Callbacks](docs/callbacks.md) for the full recovery pattern.
+
+**Why does `isSuccessful()` return false for a B2B request that worked?**
+
+The B2B Express Checkout acknowledgement has a different shape (`code` instead
+of `ResponseCode`). Read it with `getData()`. See
+[B2B Express Checkout](docs/b2b-express-checkout.md).
+
+**Do I need to protect my callback URLs?**
+
+Yes. They are public endpoints. Restrict them to Safaricom's published IPs with
+middleware and match every callback against a transaction you actually
+initiated. See [Callbacks](docs/callbacks.md#verify-the-callback-source-ip-whitelisting).
+
+**How do I test without touching real money?**
+
+Use `MPESA_ENV=sandbox` with the test credentials from the Daraja portal. In
+your own test suite, fake the HTTP layer with Laravel's `Http::fake()`.
+
+**Can one app use multiple shortcodes or both environments at once?**
+
+Not out of the box. The client reads one set of credentials from config. If you
+need more, rebind the `Client` contract with different config per tenant or
+context.
+
+---
 
 ## For Contributors
 
-This package includes comprehensive testing capabilities:
+Run the tests:
 
-### Running Tests
-
-
-Run all tests
 ```bash
 composer test
 ```
 
-### Coverage Reports
+Generate an HTML coverage report, then open `coverage/index.html`:
 
-Generate HTML coverage report:
 ```bash
 composer test:coverage
 ```
-Then open `coverage/index.html` in your browser.
 
-## Code Quality
+Code quality:
 
 ```bash
-# Check code style
-composer check-style
-
-# Fix code style issues
-composer fix-style
-
-# Run static analysis
-composer analyse
+composer check-style   # check code style
+composer fix-style     # fix code style issues
+composer analyse       # static analysis
 ```
+
+---
 
 ## Credits
 
@@ -549,4 +251,4 @@ composer analyse
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+The MIT License (MIT). Please see [License File](LICENSE) for more information.
